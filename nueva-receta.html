@@ -16,7 +16,7 @@
          2. config.js            → la usa para crear supabaseClient
          3. auth.js              → funciones de sesión (usa supabaseClient)
          4. recetas.js           → lectura y guardado de recetas
-         5. nueva-receta.js      → lógica de esta página
+         5. nueva-receta.js      → lógica de esta página (crear y editar)
   -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
   <script src="js/config.js" defer></script>
@@ -31,7 +31,21 @@
   </header>
 
   <main>
-    <h1>Nueva receta</h1>
+    <!-- Esta página sirve para CREAR y para EDITAR:
+         - nueva-receta.html          → receta nueva (formulario vacío)
+         - nueva-receta.html?id=...   → editar esa receta (formulario cargado)
+         JavaScript cambia el título y los textos según el modo. -->
+    <h1 id="titulo-pagina">Nueva receta</h1>
+
+    <!-- Solo en modo edición: mientras se trae la receta -->
+    <p id="estado-carga" class="estado" hidden>Cargando receta...</p>
+
+    <!-- Solo en modo edición: si la receta no existe, no es del usuario
+         o falla la conexión. Reemplaza al formulario. -->
+    <div id="error-carga" class="estado" hidden>
+      <p id="texto-error-carga" class="error"></p>
+      <a href="app.html" class="boton">Volver a Mis recetas</a>
+    </div>
 
     <!-- novalidate: desactiva los globos de error del navegador.
          La validación la hace nuestro JavaScript, que muestra los
@@ -57,6 +71,18 @@
         <!-- Vista previa: oculta hasta que se elige una imagen -->
         <img id="vista-principal" class="vista-previa" alt="Vista previa de la imagen principal" hidden>
 
+        <!-- Solo en modo edición y si la receta ya tenía imagen:
+             muestra la actual con la opción de quitarla. Elegir un
+             archivo arriba la reemplaza. -->
+        <div id="imagen-principal-actual" class="imagen-actual" hidden>
+          <p class="texto-ayuda">Imagen actual (si elige otra arriba, la reemplaza):</p>
+          <img id="img-principal-actual" class="miniatura" alt="Imagen principal actual">
+          <label class="opcion">
+            <input id="quitar-imagen-principal" type="checkbox">
+            Quitar la imagen actual
+          </label>
+        </div>
+
         <label class="opcion">
           <input id="es-publica" type="checkbox">
           Receta pública (cualquiera puede verla). Si no se marca, es privada.
@@ -80,7 +106,11 @@
       </fieldset>
 
       <p id="mensaje-error" class="error" hidden></p>
-      <button id="btn-guardar" type="submit">Guardar receta</button>
+      <div class="acciones-formulario">
+        <button id="btn-guardar" type="submit">Guardar receta</button>
+        <!-- En modo edición, JavaScript cambia el destino a la receta -->
+        <a id="btn-cancelar" href="app.html" class="boton">Cancelar</a>
+      </div>
     </form>
   </main>
 
@@ -103,6 +133,15 @@
   <template id="plantilla-paso">
     <li class="fila-paso">
       <textarea class="paso-descripcion" rows="2" placeholder="Describa el paso *" aria-label="Descripción del paso" required></textarea>
+      <!-- Solo en modo edición y si el paso ya tenía imagen.
+           La ruta de esa imagen se guarda en data-imagen-actual del <li>. -->
+      <div class="paso-imagen-actual imagen-actual" hidden>
+        <img class="miniatura" alt="Imagen actual del paso">
+        <label class="opcion">
+          <input class="paso-quitar-imagen" type="checkbox">
+          Quitar esta imagen
+        </label>
+      </div>
       <label class="paso-imagen-label">
         Imagen (opcional)
         <input class="paso-imagen" type="file" accept="image/jpeg,image/png,image/webp">

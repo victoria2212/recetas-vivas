@@ -32,6 +32,9 @@
   </header>
 
   <main>
+    <!-- Aviso verde: solo se ve al volver de editar (?editada=1) -->
+    <p id="mensaje-exito" class="exito" hidden>Cambios guardados.</p>
+
     <!-- ===== Estados de la página =====
          Solo uno se ve a la vez; JavaScript decide cuál. -->
 
@@ -66,6 +69,8 @@
                dueño. Ocultarlas es solo para la interfaz: la protección
                real la dan las políticas RLS de Supabase. -->
           <div id="acciones-propietario" class="acciones-receta" hidden>
+            <!-- El destino (nueva-receta.html?id=...) lo completa JavaScript -->
+            <a id="btn-editar" href="app.html" class="boton">Editar receta</a>
             <button id="btn-eliminar" type="button" class="boton-peligro">Eliminar receta</button>
           </div>
 

@@ -26,6 +26,7 @@ const detalleReceta = document.getElementById('detalle-receta');
 
 // Elementos de la eliminación
 const accionesPropietario = document.getElementById('acciones-propietario');
+const btnEditar = document.getElementById('btn-editar');
 const btnEliminar = document.getElementById('btn-eliminar');
 const confirmarEliminar = document.getElementById('confirmar-eliminar');
 const textoConfirmar = document.getElementById('texto-confirmar');
@@ -216,8 +217,8 @@ function dibujarPasos(pasos, urlsImagenes) {
 
 // -----------------------------------------------------------------
 // mostrarAccionesSiEsPropietario(receta)
-// Qué hace: muestra el botón "Eliminar receta" solo si el usuario
-//           logueado es el dueño de la receta.
+// Qué hace: muestra los botones "Editar receta" y "Eliminar receta"
+//           solo si el usuario logueado es el dueño de la receta.
 // Recibe:   receta → tiene usuario_id (el dueño).
 //
 // Las recetas públicas de otros usuarios también se pueden ver, por
@@ -226,6 +227,10 @@ function dibujarPasos(pasos, urlsImagenes) {
 // -----------------------------------------------------------------
 function mostrarAccionesSiEsPropietario(receta) {
   const esPropietario = receta.usuario_id === usuarioActualId;
+
+  // "Editar" abre el mismo formulario de "Nueva receta", en modo edición.
+  btnEditar.href = `nueva-receta.html?id=${encodeURIComponent(receta.id)}`;
+
   accionesPropietario.hidden = !esPropietario;
   cerrarConfirmacion(); // por si quedó abierta de antes
 }
@@ -382,6 +387,25 @@ async function cargarReceta() {
 
 
 // -----------------------------------------------------------------
+// mostrarAvisoSiSeEdito()
+// Qué hace: si la página se abrió con ?editada=1 (viene de guardar
+//           cambios), muestra el aviso verde "Cambios guardados".
+//
+// history.replaceState saca el "&editada=1" de la dirección (dejando
+// el id), para que el aviso no vuelva a aparecer al recargar.
+// -----------------------------------------------------------------
+function mostrarAvisoSiSeEdito() {
+  const parametros = new URLSearchParams(window.location.search);
+
+  if (parametros.get('editada') === '1') {
+    document.getElementById('mensaje-exito').hidden = false;
+    const id = parametros.get('id');
+    history.replaceState(null, '', `receta.html?id=${encodeURIComponent(id)}`);
+  }
+}
+
+
+// -----------------------------------------------------------------
 // iniciarPagina()
 // Qué hace: verifica la sesión (sin sesión, vuelve al inicio),
 //           guarda el id del usuario (para saber si es el dueño) y
@@ -392,6 +416,7 @@ async function iniciarPagina() {
   if (!sesion) return;
 
   usuarioActualId = sesion.user.id;
+  mostrarAvisoSiSeEdito();
 
   await cargarReceta();
 }
