@@ -5,6 +5,23 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Recetas Vivas · Iniciar sesión</title>
   <link rel="stylesheet" href="css/styles.css">
+
+  <!-- ===== JavaScript =====
+       defer: el navegador descarga estos archivos SIN frenar la lectura
+       del HTML y los ejecuta recién cuando el HTML está completo, así
+       los getElementById encuentran sus elementos.
+       Los scripts con defer se ejecutan en el MISMO ORDEN en que están
+       escritos, y el orden importa:
+         1. Librería de Supabase → crea la variable global "supabase"
+         2. config.js            → la usa para crear supabaseClient
+         3. auth.js              → funciones de sesión (usa supabaseClient)
+         4. inicio.js            → lógica de esta página
+       Esta página no carga recetas.js porque no lee ni guarda recetas.
+  -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
+  <script src="js/config.js" defer></script>
+  <script src="js/auth.js" defer></script>
+  <script src="js/inicio.js" defer></script>
 </head>
 <body>
   <main>
@@ -14,39 +31,7 @@
     <button id="btn-google" type="button">Iniciar sesión con Google</button>
 
     <!-- Aquí se muestran los errores, si los hay -->
-    <p id="mensaje-error" hidden></p>
+    <p id="mensaje-error" class="error" hidden></p>
   </main>
-
-  <!-- ORDEN DE CARGA (importa):
-       1. Librería de Supabase (crea la variable global "supabase")
-       2. config.js (usa esa variable para crear supabaseClient)
-       3. auth.js (usa supabaseClient) -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="js/config.js"></script>
-  <script src="js/auth.js"></script>
-
-  <script>
-    const mensajeError = document.getElementById('mensaje-error');
-
-    function mostrarError(texto) {
-      mensajeError.textContent = texto;
-      mensajeError.hidden = false;
-    }
-
-    // Si ya está logueada, pasa directo a app.html
-    redirigirSiHaySesion().catch((error) => {
-      console.error(error);
-      mostrarError('No se pudo verificar la sesión.');
-    });
-
-    document.getElementById('btn-google').addEventListener('click', async () => {
-      try {
-        await iniciarSesionConGoogle();
-      } catch (error) {
-        console.error(error);
-        mostrarError('No se pudo iniciar sesión con Google: ' + error.message);
-      }
-    });
-  </script>
 </body>
 </html>
