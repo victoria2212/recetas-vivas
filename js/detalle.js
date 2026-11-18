@@ -24,6 +24,19 @@ const textoErrorReceta = document.getElementById('texto-error-receta');
 const noEncontrada = document.getElementById('no-encontrada');
 const detalleReceta = document.getElementById('detalle-receta');
 
+// Elementos de la eliminación
+const accionesPropietario = document.getElementById('acciones-propietario');
+const btnEliminar = document.getElementById('btn-eliminar');
+const confirmarEliminar = document.getElementById('confirmar-eliminar');
+const textoConfirmar = document.getElementById('texto-confirmar');
+const errorEliminar = document.getElementById('error-eliminar');
+const btnConfirmarEliminar = document.getElementById('btn-confirmar-eliminar');
+const btnCancelarEliminar = document.getElementById('btn-cancelar-eliminar');
+
+// ESTADO de la página. let porque se completan al cargar.
+let usuarioActualId = null; // id del usuario logueado
+let recetaActual = null;    // la receta que se está mostrando (para eliminarla)
+
 
 // -----------------------------------------------------------------
 // leerIdDeLaDireccion()
@@ -202,6 +215,91 @@ function dibujarPasos(pasos, urlsImagenes) {
 
 
 // -----------------------------------------------------------------
+// mostrarAccionesSiEsPropietario(receta)
+// Qué hace: muestra el botón "Eliminar receta" solo si el usuario
+//           logueado es el dueño de la receta.
+// Recibe:   receta → tiene usuario_id (el dueño).
+//
+// Las recetas públicas de otros usuarios también se pueden ver, por
+// eso hay que comparar. Si alguien mostrara el botón a la fuerza
+// (desde DevTools), igual no podría borrar: lo impide RLS.
+// -----------------------------------------------------------------
+function mostrarAccionesSiEsPropietario(receta) {
+  const esPropietario = receta.usuario_id === usuarioActualId;
+  accionesPropietario.hidden = !esPropietario;
+  cerrarConfirmacion(); // por si quedó abierta de antes
+}
+
+
+// -----------------------------------------------------------------
+// abrirConfirmacion()
+// Qué hace: al tocar "Eliminar receta", muestra la pregunta de
+//           confirmación en la página y oculta el botón original.
+//
+// El foco va a "Cancelar" (y no a "Sí, eliminar"): si alguien aprieta
+// Enter sin leer, no borra nada por accidente.
+// -----------------------------------------------------------------
+function abrirConfirmacion() {
+  textoConfirmar.textContent =
+    `¿Desea eliminar por completo la receta: "${recetaActual.titulo}"?`;
+  errorEliminar.hidden = true;
+  accionesPropietario.hidden = true;
+  confirmarEliminar.hidden = false;
+  btnCancelarEliminar.focus();
+}
+
+
+// -----------------------------------------------------------------
+// cerrarConfirmacion()
+// Qué hace: oculta la pregunta y vuelve a mostrar "Eliminar receta".
+// Se llama al tocar "Cancelar".
+// -----------------------------------------------------------------
+function cerrarConfirmacion() {
+  confirmarEliminar.hidden = true;
+  // Solo se vuelve a mostrar el botón si el usuario es el dueño.
+  accionesPropietario.hidden = !recetaActual || recetaActual.usuario_id !== usuarioActualId;
+}
+
+
+// -----------------------------------------------------------------
+// activarBotonesDeConfirmacion(activos)
+// Qué hace: activa o desactiva "Sí, eliminar" y "Cancelar".
+// Recibe:   activos → true para activarlos, false para desactivarlos.
+// Mientras se borra, se desactivan para evitar un doble clic.
+// -----------------------------------------------------------------
+function activarBotonesDeConfirmacion(activos) {
+  btnConfirmarEliminar.disabled = !activos;
+  btnCancelarEliminar.disabled = !activos;
+  btnConfirmarEliminar.textContent = activos ? 'Sí, eliminar' : 'Eliminando...';
+}
+
+
+// -----------------------------------------------------------------
+// alConfirmarEliminacion()
+// Qué hace: borra la receta (eliminarReceta, en recetas.js) y vuelve
+//           al listado con el aviso "Receta eliminada". Si falla,
+//           muestra el error dentro del recuadro de confirmación.
+// -----------------------------------------------------------------
+async function alConfirmarEliminacion() {
+  activarBotonesDeConfirmacion(false);
+  errorEliminar.hidden = true;
+
+  try {
+    await eliminarReceta(recetaActual);
+    // ?eliminada=1 le avisa a app.html que muestre "Receta eliminada".
+    // replace (y no href): así el botón "Atrás" del navegador no
+    // vuelve a esta página, que ya no existe.
+    window.location.replace('app.html?eliminada=1');
+  } catch (error) {
+    console.error(error);
+    errorEliminar.textContent = 'No se pudo eliminar la receta: ' + error.message;
+    errorEliminar.hidden = false;
+    activarBotonesDeConfirmacion(true);
+  }
+}
+
+
+// -----------------------------------------------------------------
 // mostrarSolo(elemento)
 // Qué hace: oculta todos los estados y muestra solo el indicado.
 // Recibe:   elemento → el estado a mostrar (o null para ocultar todos).
@@ -260,6 +358,9 @@ async function cargarReceta() {
     dibujarIngredientes(receta.ingredientes);
     dibujarPasos(receta.pasos, urlsImagenes);
 
+    recetaActual = receta; // se guarda para poder eliminarla después
+    mostrarAccionesSiEsPropietario(receta);
+
     mostrarSolo(detalleReceta);
 
   } catch (error) {
@@ -282,12 +383,15 @@ async function cargarReceta() {
 
 // -----------------------------------------------------------------
 // iniciarPagina()
-// Qué hace: verifica la sesión (sin sesión, vuelve al inicio) y
+// Qué hace: verifica la sesión (sin sesión, vuelve al inicio),
+//           guarda el id del usuario (para saber si es el dueño) y
 //           carga la receta.
 // -----------------------------------------------------------------
 async function iniciarPagina() {
   const sesion = await protegerPagina();
   if (!sesion) return;
+
+  usuarioActualId = sesion.user.id;
 
   await cargarReceta();
 }
@@ -298,6 +402,11 @@ async function iniciarPagina() {
 // ===================================================================
 document.getElementById('btn-reintentar').addEventListener('click', cargarReceta);
 document.getElementById('btn-salir').addEventListener('click', cerrarSesion);
+
+// -- Eliminar receta --
+btnEliminar.addEventListener('click', abrirConfirmacion);
+btnCancelarEliminar.addEventListener('click', cerrarConfirmacion);
+btnConfirmarEliminar.addEventListener('click', alConfirmarEliminacion);
 
 // Arranque de la página.
 iniciarPagina().catch((error) => {
