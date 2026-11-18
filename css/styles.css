@@ -267,3 +267,108 @@ button:disabled {
   background: #eee;
   color: #555;
 }
+
+/* =====================================================================
+   DETALLE DE RECETA (receta.html)
+   ===================================================================== */
+
+/* Encabezado en dos columnas: imagen principal | título y descripción.
+   En el celular se apilan (ver media query más abajo). */
+.encabezado-receta {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 1.25rem;
+  align-items: start;
+  margin-bottom: 1.5rem;
+}
+
+/* Imagen principal: cuadrada y recortada sin deformarse.
+   aspect-ratio fija la proporción 1:1 aunque la foto sea rectangular. */
+.imagen-principal,
+.encabezado-receta .sin-imagen {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  height: auto;
+  object-fit: cover;
+  border-radius: 8px;
+}
+
+.info-receta h1 {
+  margin: 0.4rem 0 0.5rem;
+  line-height: 1.2;
+}
+
+.info-receta p {
+  margin: 0;
+  color: #444;
+  white-space: pre-line; /* respeta los saltos de línea que escribió el usuario */
+}
+
+/* Cada sección (Ingredientes, Pasos) separada por una línea */
+.seccion-receta {
+  border-top: 1px solid #ddd;
+  padding-top: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.seccion-receta h2 {
+  margin-top: 0;
+  font-size: 1.25rem;
+}
+
+/* ---- Ingredientes ---- */
+.lista-ingredientes {
+  list-style: none; /* se quitan las viñetas por defecto */
+  padding: 0;
+  margin: 0;
+}
+
+.lista-ingredientes li {
+  padding: 0.4rem 0;
+  border-bottom: 1px dashed #e5e5e5;
+}
+
+/* Cantidad + unidad resaltadas para leerlas rápido */
+.ing-cantidad {
+  font-weight: 600;
+  margin-right: 0.35rem;
+}
+
+.ing-nota {
+  color: #777;
+  font-style: italic;
+}
+
+/* ---- Pasos ---- */
+.lista-pasos {
+  padding-left: 1.25rem; /* espacio para los números del <ol> */
+  margin: 0;
+}
+
+.lista-pasos li {
+  margin-bottom: 1.25rem;
+  padding-left: 0.25rem;
+}
+
+.lista-pasos li::marker {
+  font-weight: 700; /* números de los pasos en negrita */
+}
+
+.lista-pasos p {
+  margin: 0 0 0.5rem;
+  white-space: pre-line;
+}
+
+.imagen-paso {
+  display: block;
+  max-width: 100%;
+  width: 360px;
+  border-radius: 6px;
+}
+
+/* En pantallas angostas: imagen arriba, texto abajo */
+@media (max-width: 600px) {
+  .encabezado-receta {
+    grid-template-columns: 1fr;
+  }
+}

@@ -378,3 +378,59 @@ async function obtenerUrlsDeImagenes(rutas) {
 
   return urlsPorRuta;
 }
+
+
+// =====================================================================
+// LECTURA DE UNA RECETA (detalle)
+// =====================================================================
+
+
+// ---------------------------------------------------------------------
+// traerRecetaPorId(id)
+//
+// Qué hace: trae UNA receta completa: sus datos, sus ingredientes y sus
+//           pasos, en UNA sola llamada a la base.
+// Recibe:   id → el id (uuid) de la receta, el que viene en la dirección
+//                receta.html?id=...
+// Devuelve: un objeto con la receta y dos arrays adentro:
+//           {
+//             id, titulo, descripcion, imagen_principal, es_publica,
+//             created_at, usuario_id,
+//             ingredientes: [{ orden, nombre, cantidad, unidad, nota }, ...],
+//             pasos:        [{ numero, descripcion, imagen }, ...]
+//           }
+//           o null si la receta no existe o el usuario no tiene permiso
+//           para verla (las políticas RLS la "esconden").
+//
+// Cómo trae todo junto: dentro del select se escriben las tablas
+// relacionadas entre paréntesis: ingredientes(...) y pasos(...).
+// Supabase detecta la relación por las claves foráneas (receta_id) y
+// devuelve los ingredientes y pasos ANIDADOS dentro de la receta.
+// Es el equivalente a un JOIN, pero con la respuesta ya agrupada.
+//
+// Orden de los hijos: SQL no garantiza el orden de las filas, por eso
+// se ordena explícitamente cada tabla relacionada con referencedTable.
+//
+// maybeSingle() (en lugar de single()): si no encuentra ninguna fila
+// devuelve null en vez de un error. Así se distingue "no existe / no
+// tiene permiso" (null) de "falló la conexión" (error).
+// ---------------------------------------------------------------------
+async function traerRecetaPorId(id) {
+  const { data, error } = await supabaseClient
+    .from('recetas')
+    .select(`
+      id, titulo, descripcion, imagen_principal, es_publica, created_at, usuario_id,
+      ingredientes ( orden, nombre, cantidad, unidad, nota ),
+      pasos ( numero, descripcion, imagen )
+    `)
+    .eq('id', id)
+    .order('orden', { referencedTable: 'ingredientes', ascending: true })
+    .order('numero', { referencedTable: 'pasos', ascending: true })
+    .maybeSingle();
+
+  if (error) {
+    throw error;
+  }
+
+  return data; // null si no se encontró
+}
