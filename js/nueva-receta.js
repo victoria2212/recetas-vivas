@@ -160,9 +160,8 @@ function validar(datos) {
   if (!datos.titulo) {
     return 'Falta el título.';
   }
-  if (!datos.imagenPrincipal) {
-    return 'Falta la imagen del resultado final.';
-  }
+  // La imagen principal ya no se valida acá: es opcional. Si se eligió
+  // una, guardarReceta() revisa su tipo y tamaño con validarImagen().
   if (datos.ingredientes.length === 0) {
     return 'Agregue al menos un ingrediente.';
   }

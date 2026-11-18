@@ -40,9 +40,20 @@
     <p id="mensaje-exito" class="exito" hidden>Receta guardada correctamente.</p>
     <p id="mensaje-error" class="error" hidden></p>
 
-    <!-- Buscador. type="search" agrega la ✕ para borrar en algunos navegadores. -->
-    <label for="buscador" class="oculto-visual">Buscar recetas</label>
-    <input id="buscador" type="search" placeholder="Buscar por título..." autocomplete="off">
+    <!-- Buscador + historial de búsquedas.
+         El contenedor tiene position: relative para que la lista del
+         historial se ubique justo debajo del campo, encima del listado. -->
+    <div id="contenedor-buscador" class="contenedor-buscador">
+      <label for="buscador" class="oculto-visual">Buscar recetas</label>
+      <!-- type="search" agrega la ✕ para borrar en algunos navegadores.
+           autocomplete="off" desactiva el historial propio del navegador:
+           se usa el nuestro, guardado en localStorage. -->
+      <input id="buscador" type="search" placeholder="Buscar por título..." autocomplete="off">
+
+      <!-- Últimas búsquedas. Empieza VACÍA y oculta: JavaScript la
+           completa y la muestra al hacer clic en el buscador. -->
+      <ul id="historial-busquedas" class="historial-busquedas" aria-label="Búsquedas recientes" hidden></ul>
+    </div>
 
     <!-- ===== Estados del listado =====
          Solo uno se ve a la vez; JavaScript decide cuál. -->
