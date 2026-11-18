@@ -48,10 +48,12 @@
         <label for="descripcion">Descripción</label>
         <textarea id="descripcion" name="descripcion" rows="3"></textarea>
 
-        <label for="imagen-principal">Imagen del resultado final * (JPG, PNG o WebP, máx. 5 MB)</label>
+        <!-- Opcional: a veces todavía no se tiene la foto del resultado final.
+             Se puede agregar más adelante, al editar la receta. -->
+        <label for="imagen-principal">Imagen del resultado final (opcional · JPG, PNG o WebP, máx. 5 MB)</label>
         <!-- accept: el selector de archivos muestra solo imágenes de estos tipos -->
         <input id="imagen-principal" name="imagen-principal" type="file"
-               accept="image/jpeg,image/png,image/webp" required>
+               accept="image/jpeg,image/png,image/webp">
         <!-- Vista previa: oculta hasta que se elige una imagen -->
         <img id="vista-principal" class="vista-previa" alt="Vista previa de la imagen principal" hidden>
 

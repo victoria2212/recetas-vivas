@@ -22,6 +22,13 @@
 // usen el mismo navegador.
 const CLAVE_BUSQUEDA = 'recetas-vivas:busqueda';
 
+// Clave del historial: las últimas búsquedas, guardadas como un array
+// de textos en formato JSON.
+const CLAVE_HISTORIAL = 'recetas-vivas:historial-busquedas';
+
+// Cuántas búsquedas recientes se recuerdan como máximo.
+const MAXIMO_HISTORIAL = 5;
+
 // Referencias a los elementos que se usan varias veces.
 const saludo = document.getElementById('saludo');
 const mensajeError = document.getElementById('mensaje-error');
@@ -32,6 +39,8 @@ const textoErrorListado = document.getElementById('texto-error-listado');
 const sinRecetas = document.getElementById('sin-recetas');
 const sinResultados = document.getElementById('sin-resultados');
 const listaRecetas = document.getElementById('lista-recetas');
+const contenedorBuscador = document.getElementById('contenedor-buscador');
+const listaHistorial = document.getElementById('historial-busquedas');
 
 // ESTADO de la página: los datos que llegan de la API.
 // Se usa let porque se reemplazan cada vez que se cargan las recetas.
@@ -126,6 +135,262 @@ function leerBusquedaGuardada() {
   } catch (error) {
     console.warn('No se pudo leer la búsqueda guardada:', error);
     return '';
+  }
+}
+
+
+// =================================================================
+// HISTORIAL DE BÚSQUEDAS (localStorage)
+// Guarda las últimas 5 búsquedas y las muestra como sugerencias
+// debajo del buscador, para elegir una sin volver a escribirla.
+// =================================================================
+
+
+// -----------------------------------------------------------------
+// leerHistorial()
+// Qué hace: recupera del localStorage el array de búsquedas recientes.
+// Devuelve: un array de textos, de la más nueva a la más vieja.
+//           [] si no hay nada guardado o si lo guardado está roto.
+//
+// localStorage solo guarda TEXTO. El array se guarda convertido a
+// texto JSON (JSON.stringify) y al leerlo se convierte de nuevo a
+// array (JSON.parse).
+// JSON.parse lanza un error si el texto no es JSON válido (por
+// ejemplo, si alguien lo modificó a mano). El try/catch evita que
+// eso rompa la página: en ese caso se arranca con el historial vacío.
+// -----------------------------------------------------------------
+function leerHistorial() {
+  try {
+    const texto = localStorage.getItem(CLAVE_HISTORIAL);
+    if (!texto) {
+      return [];
+    }
+
+    const historial = JSON.parse(texto);
+
+    // Aunque sea JSON válido, podría no ser un array de textos
+    // (por ejemplo, un número). Array.isArray lo comprueba y filter
+    // descarta cualquier elemento que no sea texto.
+    if (!Array.isArray(historial)) {
+      return [];
+    }
+    return historial
+      .filter((busqueda) => typeof busqueda === 'string')
+      .slice(0, MAXIMO_HISTORIAL);
+
+  } catch (error) {
+    console.warn('El historial guardado no es válido; se ignora:', error);
+    return [];
+  }
+}
+
+
+// -----------------------------------------------------------------
+// guardarHistorial(historial)
+// Qué hace: guarda el array de búsquedas en localStorage, como JSON.
+// Recibe:   historial → array de textos.
+// Si localStorage falla, el historial no se guarda pero la página
+// sigue funcionando.
+// -----------------------------------------------------------------
+function guardarHistorial(historial) {
+  try {
+    localStorage.setItem(CLAVE_HISTORIAL, JSON.stringify(historial));
+  } catch (error) {
+    console.warn('No se pudo guardar el historial:', error);
+  }
+}
+
+
+// -----------------------------------------------------------------
+// registrarBusqueda(texto)
+// Qué hace: agrega una búsqueda al principio del historial.
+//           - No guarda búsquedas vacías.
+//           - Si ya estaba, la saca de su lugar y la pone primera
+//             (así no se repite y queda como la más reciente).
+//           - Deja solo las últimas 5.
+// Recibe:   texto → la búsqueda a registrar.
+//
+// Se considera repetida aunque cambien las mayúsculas o las tildes
+// ("Budín" y "budin" son la misma búsqueda), usando normalizarTexto().
+// -----------------------------------------------------------------
+function registrarBusqueda(texto) {
+  const busqueda = texto.trim();
+  if (!busqueda) {
+    return;
+  }
+
+  const normalizada = normalizarTexto(busqueda);
+
+  // filter arma un array nuevo SIN la búsqueda repetida.
+  const sinRepetida = leerHistorial().filter(
+    (anterior) => normalizarTexto(anterior) !== normalizada
+  );
+
+  // [nueva, ...resto]: la nueva va primera y el spread (...) agrega
+  // las anteriores detrás. slice(0, 5) corta las que sobran.
+  const historial = [busqueda, ...sinRepetida].slice(0, MAXIMO_HISTORIAL);
+  guardarHistorial(historial);
+}
+
+
+// -----------------------------------------------------------------
+// mostrarHistorial(filtrar)
+// Qué hace: dibuja la lista de búsquedas recientes debajo del
+//           buscador. Si no hay ninguna para mostrar, la oculta.
+// Recibe:   filtrar → true: muestra solo las que contienen lo que se
+//                     está escribiendo (mientras se escribe).
+//                     false: muestra todas (al hacer clic en el campo).
+//
+// Cada búsqueda es un <button> dentro de un <li>: así también se
+// puede elegir con el teclado (Tab y Enter). El texto de la búsqueda
+// se guarda en data-busqueda para leerlo al hacer clic.
+// -----------------------------------------------------------------
+function mostrarHistorial(filtrar) {
+  const textoNormalizado = normalizarTexto(buscador.value.trim());
+
+  // Operador ternario: si hay que filtrar, se filtra; si no, se usan todas.
+  const sugerencias = filtrar
+    ? leerHistorial().filter((busqueda) => normalizarTexto(busqueda).includes(textoNormalizado))
+    : leerHistorial();
+
+  listaHistorial.replaceChildren();
+
+  if (sugerencias.length === 0) {
+    listaHistorial.hidden = true;
+    return;
+  }
+
+  // -- Título de la lista (no se puede elegir: es solo texto) --
+  const titulo = document.createElement('li');
+  titulo.className = 'titulo-historial';
+  titulo.textContent = 'Búsquedas recientes';
+  listaHistorial.appendChild(titulo);
+
+  // -- Una opción por búsqueda --
+  sugerencias.forEach((busqueda) => {
+    const item = document.createElement('li');
+    const boton = document.createElement('button');
+    boton.type = 'button';
+    boton.className = 'opcion-historial';
+    boton.textContent = busqueda;
+    boton.dataset.busqueda = busqueda; // queda como data-busqueda="..."
+    item.appendChild(boton);
+    listaHistorial.appendChild(item);
+  });
+
+  // -- Botón para borrar todo el historial --
+  const itemBorrar = document.createElement('li');
+  const botonBorrar = document.createElement('button');
+  botonBorrar.type = 'button';
+  botonBorrar.className = 'borrar-historial';
+  botonBorrar.textContent = 'Borrar historial';
+  botonBorrar.dataset.accion = 'borrar';
+  itemBorrar.appendChild(botonBorrar);
+  listaHistorial.appendChild(itemBorrar);
+
+  listaHistorial.hidden = false;
+}
+
+
+// -----------------------------------------------------------------
+// ocultarHistorial()
+// Qué hace: esconde la lista de búsquedas recientes.
+// -----------------------------------------------------------------
+function ocultarHistorial() {
+  listaHistorial.hidden = true;
+}
+
+
+// -----------------------------------------------------------------
+// borrarHistorial()
+// Qué hace: elimina el historial del localStorage y oculta la lista.
+// removeItem borra solo esa clave; las demás quedan como estaban.
+// -----------------------------------------------------------------
+function borrarHistorial() {
+  try {
+    localStorage.removeItem(CLAVE_HISTORIAL);
+  } catch (error) {
+    console.warn('No se pudo borrar el historial:', error);
+  }
+  ocultarHistorial();
+}
+
+
+// -----------------------------------------------------------------
+// alHacerClicEnHistorial(evento)
+// Qué hace: maneja TODOS los clics dentro de la lista del historial
+//           con un solo listener (delegación de eventos):
+//           - clic en una búsqueda → la escribe en el buscador,
+//             filtra el listado y la sube al primer lugar;
+//           - clic en "Borrar historial" → borra el historial.
+// Recibe:   evento → el clic. evento.target es el elemento tocado.
+//
+// closest('button') busca el botón más cercano hacia arriba: si se
+// tocó el texto dentro del botón, igual se encuentra el botón.
+// Si el clic no fue en un botón (por ejemplo, en el título), no hace nada.
+// -----------------------------------------------------------------
+function alHacerClicEnHistorial(evento) {
+  const boton = evento.target.closest('button');
+  if (!boton) {
+    return;
+  }
+
+  if (boton.dataset.accion === 'borrar') {
+    borrarHistorial();
+    return;
+  }
+
+  buscador.value = boton.dataset.busqueda;
+  filtrarRecetas();
+  registrarBusqueda(buscador.value);
+  ocultarHistorial();
+}
+
+
+// -----------------------------------------------------------------
+// alEscribirEnBuscador()
+// Qué hace: con cada tecla, filtra el listado y actualiza las
+//           sugerencias del historial según lo que se está escribiendo.
+// -----------------------------------------------------------------
+function alEscribirEnBuscador() {
+  filtrarRecetas();
+  mostrarHistorial(true);
+}
+
+
+// -----------------------------------------------------------------
+// alPresionarTeclaEnBuscador(evento)
+// Qué hace: Enter → registra la búsqueda en el historial y cierra
+//           las sugerencias. Escape → solo cierra las sugerencias.
+// Recibe:   evento → la tecla presionada (evento.key).
+//
+// La búsqueda se registra al presionar Enter (y al salir del campo,
+// ver el evento "change") y NO con cada tecla: si no, el historial se
+// llenaría de búsquedas a medio escribir ("p", "pa", "pan"...).
+// -----------------------------------------------------------------
+function alPresionarTeclaEnBuscador(evento) {
+  if (evento.key === 'Enter') {
+    registrarBusqueda(buscador.value);
+    ocultarHistorial();
+  } else if (evento.key === 'Escape') {
+    ocultarHistorial();
+  }
+}
+
+
+// -----------------------------------------------------------------
+// alSalirDelBuscador(evento)
+// Qué hace: cierra las sugerencias cuando el foco sale del buscador
+//           y de su lista (por ejemplo, al hacer clic en otra parte).
+// Recibe:   evento → "focusout"; evento.relatedTarget es el elemento
+//           que RECIBE el foco (o null si es ninguno).
+//
+// Si el foco pasa del campo a un botón de la lista (con Tab), sigue
+// dentro del contenedor: la lista NO se cierra.
+// -----------------------------------------------------------------
+function alSalirDelBuscador(evento) {
+  if (!contenedorBuscador.contains(evento.relatedTarget)) {
+    ocultarHistorial();
   }
 }
 
@@ -333,7 +598,25 @@ async function iniciarPagina() {
 
 // "input" se dispara con cada tecla (también al borrar o pegar),
 // así el listado se filtra mientras se escribe.
-buscador.addEventListener('input', filtrarRecetas);
+buscador.addEventListener('input', alEscribirEnBuscador);
+
+// -- Historial de búsquedas --
+// focus: al hacer clic (o entrar con Tab) en el buscador, se muestran
+// todas las búsquedas recientes.
+buscador.addEventListener('focus', () => mostrarHistorial(false));
+buscador.addEventListener('keydown', alPresionarTeclaEnBuscador);
+
+// change: se dispara al salir del campo si el texto cambió. Registra
+// la búsqueda aunque no se haya presionado Enter.
+buscador.addEventListener('change', () => registrarBusqueda(buscador.value));
+contenedorBuscador.addEventListener('focusout', alSalirDelBuscador);
+listaHistorial.addEventListener('click', alHacerClicEnHistorial);
+
+// mousedown ocurre ANTES que click. Sin esto, al tocar una sugerencia
+// el buscador perdería el foco primero, la lista se cerraría y el
+// clic no llegaría a la opción. preventDefault evita que el campo
+// pierda el foco.
+listaHistorial.addEventListener('mousedown', (evento) => evento.preventDefault());
 document.getElementById('btn-reintentar').addEventListener('click', cargarRecetas);
 document.getElementById('btn-salir').addEventListener('click', cerrarSesion);
 

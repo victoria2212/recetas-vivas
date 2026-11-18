@@ -95,7 +95,7 @@ async function subirImagen(ruta, archivo) {
 //             titulo:          texto (obligatorio),
 //             descripcion:     texto (puede estar vacío),
 //             esPublica:       true o false,
-//             imagenPrincipal: File (obligatorio),
+//             imagenPrincipal: File o null (opcional),
 //             ingredientes:    [{ nombre, cantidad, unidad, nota }],
 //             pasos:           [{ descripcion, imagen: File o null }]
 //           }
@@ -117,7 +117,10 @@ async function guardarReceta(datos) {
 
   // ---- Validaciones previas ----
   // Si alguna imagen es inválida, el error corta acá y no se crea nada.
-  validarImagen(datos.imagenPrincipal, 'Imagen principal');
+  // La imagen principal es opcional: solo se valida si se eligió una.
+  if (datos.imagenPrincipal) {
+    validarImagen(datos.imagenPrincipal, 'Imagen principal');
+  }
 
   // forEach recorre los pasos; i es la posición (empieza en 0).
   datos.pasos.forEach((paso, i) => {
@@ -166,11 +169,15 @@ async function guardarReceta(datos) {
     // tildes que complican las rutas.
     const marca = Date.now();
 
-    // -- Imagen principal --
-    const extPrincipal = EXTENSIONES_PERMITIDAS[datos.imagenPrincipal.type];
-    const rutaPrincipal = `${carpeta}/principal-${marca}.${extPrincipal}`;
-    await subirImagen(rutaPrincipal, datos.imagenPrincipal);
-    rutasSubidas.push(rutaPrincipal); // se anota por si hay que borrarla
+    // -- Imagen principal (opcional) --
+    // let porque cambia: queda en null si el usuario no eligió imagen.
+    let rutaPrincipal = null;
+    if (datos.imagenPrincipal) {
+      const extPrincipal = EXTENSIONES_PERMITIDAS[datos.imagenPrincipal.type];
+      rutaPrincipal = `${carpeta}/principal-${marca}.${extPrincipal}`;
+      await subirImagen(rutaPrincipal, datos.imagenPrincipal);
+      rutasSubidas.push(rutaPrincipal); // se anota por si hay que borrarla
+    }
 
     // -- Imágenes de los pasos --
     // Mientras se recorren los pasos, se arma el array de filas que se
@@ -199,11 +206,15 @@ async function guardarReceta(datos) {
 
     // -- Ruta de la imagen principal en la receta --
     // Se guarda la RUTA, no la imagen: la imagen ya está en Storage.
-    const { error: errorRuta } = await supabaseClient
-      .from('recetas')
-      .update({ imagen_principal: rutaPrincipal })
-      .eq('id', recetaId); // .eq = WHERE id = recetaId
-    if (errorRuta) throw errorRuta;
+    // Si no hay imagen, no hace falta actualizar nada: la columna
+    // imagen_principal ya quedó en null al crear la receta.
+    if (rutaPrincipal) {
+      const { error: errorRuta } = await supabaseClient
+        .from('recetas')
+        .update({ imagen_principal: rutaPrincipal })
+        .eq('id', recetaId); // .eq = WHERE id = recetaId
+      if (errorRuta) throw errorRuta;
+    }
 
     // -- Ingredientes --
     // map transforma cada ingrediente del formulario en una fila de la

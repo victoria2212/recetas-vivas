@@ -156,11 +156,19 @@ button:disabled {
   flex-wrap: wrap; /* en pantallas angostas, el botón baja de línea */
 }
 
+/* Contenedor del buscador: el margen va acá (y no en el input) para
+   que la lista del historial quede pegada justo debajo del campo.
+   position: relative → la lista (absolute) se ubica respecto de él. */
+.contenedor-buscador {
+  position: relative;
+  margin: 1rem 0;
+}
+
 /* Buscador a todo el ancho */
 #buscador {
   width: 100%;
   padding: 0.6rem;
-  margin: 1rem 0;
+  margin: 0;
   font: inherit;
   border: 1px solid #bbb;
   border-radius: 6px;
@@ -371,4 +379,62 @@ button:disabled {
   .encabezado-receta {
     grid-template-columns: 1fr;
   }
+}
+
+
+/* =====================================================================
+   HISTORIAL DE BÚSQUEDAS (app.html)
+   ===================================================================== */
+
+/* Lista desplegable debajo del buscador.
+   position: absolute la saca del flujo: se dibuja ENCIMA del listado
+   en lugar de empujarlo hacia abajo. top: 100% = justo debajo del campo.
+   z-index alto: queda por encima de las tarjetas. */
+.historial-busquedas {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 10;
+  margin: 0.25rem 0 0;
+  padding: 0.25rem 0;
+  list-style: none;
+  background: #fff;
+  border: 1px solid #bbb;
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+}
+
+/* El atributo hidden debe ganarle al display del navegador */
+.historial-busquedas[hidden] {
+  display: none;
+}
+
+.titulo-historial {
+  padding: 0.25rem 0.75rem;
+  font-size: 0.8rem;
+  color: #777;
+}
+
+/* Las opciones son botones, pero se ven como filas de una lista */
+.opcion-historial,
+.borrar-historial {
+  display: block;
+  width: 100%;
+  padding: 0.45rem 0.75rem;
+  border: none;
+  border-radius: 0;
+  background: none;
+  text-align: left;
+}
+
+.opcion-historial:hover,
+.opcion-historial:focus-visible {
+  background: #f2f2f2;
+}
+
+.borrar-historial {
+  font-size: 0.85rem;
+  color: #b00020;
+  border-top: 1px solid #eee;
 }
