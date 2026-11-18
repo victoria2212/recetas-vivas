@@ -142,3 +142,128 @@ button:disabled {
 .exito {
   color: #1b6e2e;
 }
+
+/* =====================================================================
+   LISTADO DE RECETAS (app.html)
+   ===================================================================== */
+
+/* Título y botón "+ Nueva receta" en la misma línea */
+.encabezado-listado {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap; /* en pantallas angostas, el botón baja de línea */
+}
+
+/* Buscador a todo el ancho */
+#buscador {
+  width: 100%;
+  padding: 0.6rem;
+  margin: 1rem 0;
+  font: inherit;
+  border: 1px solid #bbb;
+  border-radius: 6px;
+}
+
+/* Oculta un elemento a la vista pero lo deja para los lectores de
+   pantalla (accesibilidad). Se usa en la etiqueta del buscador. */
+.oculto-visual {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* Mensajes de estado: cargando, vacío, sin resultados, error */
+.estado {
+  color: #555;
+  text-align: center;
+  margin: 2rem 0;
+}
+
+/* Grilla de tarjetas.
+   auto-fill + minmax: entran tantas columnas como quepan, cada una de
+   al menos 220px. En el celular queda una sola columna, sin media query. */
+.grilla-recetas {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 1rem;
+}
+
+/* Tarjeta: es un enlace, así que se le quita el subrayado y el color azul */
+.tarjeta-receta {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  overflow: hidden; /* que la imagen respete las esquinas redondeadas */
+  color: inherit;
+  text-decoration: none;
+  transition: box-shadow 0.2s;
+}
+
+.tarjeta-receta:hover,
+.tarjeta-receta:focus-visible {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+}
+
+/* Imagen y recuadro "Sin imagen" con la misma altura.
+   object-fit: cover recorta la imagen para llenar el espacio sin deformarla. */
+.tarjeta-receta img,
+.sin-imagen {
+  width: 100%;
+  height: 160px;
+  object-fit: cover;
+}
+
+.sin-imagen {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f2f2f2;
+  color: #888;
+  font-size: 0.9rem;
+}
+
+.cuerpo-tarjeta {
+  padding: 0.75rem;
+}
+
+.cuerpo-tarjeta h2 {
+  font-size: 1.1rem;
+  margin: 0.4rem 0 0.25rem;
+}
+
+/* Descripción: corta a 2 líneas con "..." para que las tarjetas
+   tengan alturas parecidas */
+.cuerpo-tarjeta p {
+  margin: 0;
+  color: #555;
+  font-size: 0.9rem;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Etiqueta Pública / Privada */
+.etiqueta {
+  display: inline-block;
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px; /* bordes totalmente redondeados (forma de píldora) */
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.etiqueta.publica {
+  background: #e3f4e6;
+  color: #1b6e2e;
+}
+
+.etiqueta.privada {
+  background: #eee;
+  color: #555;
+}

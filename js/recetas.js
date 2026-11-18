@@ -268,3 +268,113 @@ async function deshacerReceta(recetaId, rutasSubidas) {
     console.error('No se pudo deshacer la receta incompleta:', errorLimpieza);
   }
 }
+
+
+
+// =====================================================================
+// LECTURA DE RECETAS (listado)
+// =====================================================================
+
+
+// ---------------------------------------------------------------------
+// traerMisRecetas()
+//
+// Qué hace: trae las recetas del usuario logueado, de la más nueva a
+//           la más vieja, llamando DIRECTAMENTE a la API REST de
+//           Supabase con fetch (sin pasar por la librería).
+// Recibe:   nada.
+// Devuelve: un array de objetos, uno por receta:
+//           [{ id, titulo, descripcion, imagen_principal, es_publica, created_at }, ...]
+//
+// Por qué con fetch: supabaseClient.from('recetas').select(...) hace
+// exactamente esto por dentro. Escribirlo a mano muestra cómo funciona
+// la API: una dirección, unos encabezados y una respuesta en JSON.
+//
+// Cómo se arma la dirección (sintaxis de PostgREST, la API de Supabase):
+//   /rest/v1/recetas                 → la tabla
+//   ?select=id,titulo,...            → qué columnas traer (como SELECT)
+//   &usuario_id=eq.{id}              → filtro: usuario_id = id (como WHERE)
+//   &order=created_at.desc           → orden: más nuevas primero (ORDER BY)
+// ---------------------------------------------------------------------
+async function traerMisRecetas() {
+  const sesion = await obtenerSesion();
+  if (!sesion) {
+    throw new Error('La sesión expiró. Vuelva a iniciar sesión.');
+  }
+
+  // URLSearchParams arma la parte de los parámetros (lo que va después
+  // del "?") y codifica los caracteres especiales automáticamente.
+  const parametros = new URLSearchParams({
+    select: 'id,titulo,descripcion,imagen_principal,es_publica,created_at',
+    usuario_id: `eq.${sesion.user.id}`,
+    order: 'created_at.desc'
+  });
+
+  const url = `${SUPABASE_URL}/rest/v1/recetas?${parametros}`;
+
+  // El pedido. Los encabezados (headers) son las credenciales:
+  //   apikey        → identifica al PROYECTO (la clave pública).
+  //   Authorization → identifica al USUARIO (su token de sesión).
+  //                   Con él, las políticas RLS saben quién pide.
+  const respuesta = await fetch(url, {
+    headers: {
+      apikey: SUPABASE_PUBLISHABLE_KEY,
+      Authorization: `Bearer ${sesion.access_token}`
+    }
+  });
+
+  // respuesta.ok es true si el código de estado está entre 200 y 299.
+  // fetch NO lanza error por un 401 o un 500: hay que revisarlo a mano.
+  if (!respuesta.ok) {
+    throw new Error(`El servidor respondió con el código ${respuesta.status}.`);
+  }
+
+  // .json() lee el cuerpo de la respuesta y lo convierte de texto JSON
+  // a un array de objetos de JavaScript. También es asíncrono.
+  return await respuesta.json();
+}
+
+
+// ---------------------------------------------------------------------
+// obtenerUrlsDeImagenes(rutas)
+//
+// Qué hace: pide a Storage una URL firmada (signed URL) para cada ruta.
+// Recibe:   rutas → array de rutas guardadas en la base,
+//                   ej. ["id-usuario/id-receta/principal-123.jpg", ...].
+// Devuelve: un objeto que relaciona cada ruta con su URL:
+//           { "id-usuario/.../principal-123.jpg": "https://...", ... }
+//
+// Por qué URLs firmadas: el bucket es privado, así que las imágenes no
+// tienen una dirección pública fija. Supabase entrega una dirección
+// temporal (aquí, válida por 1 hora) solo si las políticas lo permiten.
+// createSignedUrls (en plural) pide todas en UNA sola llamada.
+// ---------------------------------------------------------------------
+async function obtenerUrlsDeImagenes(rutas) {
+  const urlsPorRuta = {};
+
+  // filter(Boolean) descarta los valores vacíos (recetas sin imagen).
+  const rutasValidas = rutas.filter(Boolean);
+  if (rutasValidas.length === 0) {
+    return urlsPorRuta;
+  }
+
+  const SEGUNDOS_DE_VALIDEZ = 60 * 60; // 1 hora
+
+  const { data, error } = await supabaseClient.storage
+    .from(BUCKET_IMAGENES)
+    .createSignedUrls(rutasValidas, SEGUNDOS_DE_VALIDEZ);
+
+  if (error) {
+    throw error;
+  }
+
+  // data trae un objeto por ruta: { path, signedUrl, error }.
+  // Se guarda solo si esa imagen en particular no dio error.
+  data.forEach((item) => {
+    if (!item.error) {
+      urlsPorRuta[item.path] = item.signedUrl;
+    }
+  });
+
+  return urlsPorRuta;
+}
