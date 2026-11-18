@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Recetas Vivas · Iniciar sesión</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <main>
+    <h1>Recetas Vivas</h1>
+    <p>Guardá y organizá tus recetas.</p>
+
+    <button id="btn-google" type="button">Iniciar sesión con Google</button>
+
+    <!-- Aquí se muestran los errores, si los hay -->
+    <p id="mensaje-error" hidden></p>
+  </main>
+
+  <!-- ORDEN DE CARGA (importa):
+       1. Librería de Supabase (crea la variable global "supabase")
+       2. config.js (usa esa variable para crear supabaseClient)
+       3. auth.js (usa supabaseClient) -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/config.js"></script>
+  <script src="js/auth.js"></script>
+
+  <script>
+    const mensajeError = document.getElementById('mensaje-error');
+
+    function mostrarError(texto) {
+      mensajeError.textContent = texto;
+      mensajeError.hidden = false;
+    }
+
+    // Si ya está logueada, pasa directo a app.html
+    redirigirSiHaySesion().catch((error) => {
+      console.error(error);
+      mostrarError('No se pudo verificar la sesión.');
+    });
+
+    document.getElementById('btn-google').addEventListener('click', async () => {
+      try {
+        await iniciarSesionConGoogle();
+      } catch (error) {
+        console.error(error);
+        mostrarError('No se pudo iniciar sesión con Google: ' + error.message);
+      }
+    });
+  </script>
+</body>
+</html>
