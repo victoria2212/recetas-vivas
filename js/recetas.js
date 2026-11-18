@@ -84,11 +84,148 @@ async function subirImagen(ruta, archivo) {
 }
 
 
+// =====================================================================
+// FUNCIONES AUXILIARES DE GUARDADO
+// Las usan guardarReceta() (crear) y actualizarReceta() (editar), así
+// el mismo código no se repite en las dos.
+// =====================================================================
+
+
+// ---------------------------------------------------------------------
+// validarImagenesDeReceta(datos)
+//
+// Qué hace: valida la imagen principal y las imágenes de los pasos,
+//           pero solo las que el usuario eligió (todas son opcionales).
+// Recibe:   datos → { imagenPrincipal: File o null, pasos: [{ imagen }] }
+// Devuelve: nada. Si una imagen es inválida, lanza el error y se corta
+//           ANTES de crear o modificar nada.
+// ---------------------------------------------------------------------
+function validarImagenesDeReceta(datos) {
+  if (datos.imagenPrincipal) {
+    validarImagen(datos.imagenPrincipal, 'Imagen principal');
+  }
+
+  // forEach recorre los pasos; i es la posición (empieza en 0).
+  datos.pasos.forEach((paso, i) => {
+    if (paso.imagen) {
+      validarImagen(paso.imagen, `Paso ${i + 1}`);
+    }
+  });
+}
+
+
+// ---------------------------------------------------------------------
+// obtenerUsuarioId()
+//
+// Qué hace: devuelve el id del usuario logueado. Hace falta para
+//           armar la carpeta de las imágenes: {usuario_id}/{receta_id}/.
+// Devuelve: el id (texto). Si la sesión expiró, lanza un error.
+// ---------------------------------------------------------------------
+async function obtenerUsuarioId() {
+  const sesion = await obtenerSesion();
+  if (!sesion) {
+    throw new Error('La sesión expiró. Vuelva a iniciar sesión.');
+  }
+  return sesion.user.id;
+}
+
+
+// ---------------------------------------------------------------------
+// armarRutaImagen(carpeta, nombre, archivo, marca)
+//
+// Qué hace: arma la ruta donde se guarda una imagen en Storage.
+// Recibe:   carpeta → "{usuario_id}/{receta_id}".
+//           nombre  → "principal" o "pasos/paso-2", por ejemplo.
+//           archivo → el File (para saber su extensión).
+//           marca   → número único (Date.now()).
+// Devuelve: ej. "id-usuario/id-receta/pasos/paso-2-1731950000000.jpg"
+//
+// Se usa una marca de tiempo en lugar del nombre original del archivo,
+// que puede tener espacios o tildes que complican las rutas. Además,
+// al editar, la imagen nueva nunca pisa a la vieja: tienen otra marca.
+// ---------------------------------------------------------------------
+function armarRutaImagen(carpeta, nombre, archivo, marca) {
+  const extension = EXTENSIONES_PERMITIDAS[archivo.type];
+  return `${carpeta}/${nombre}-${marca}.${extension}`;
+}
+
+
+// ---------------------------------------------------------------------
+// armarFilasIngredientes(recetaId, ingredientes)
+//
+// Qué hace: transforma los ingredientes del formulario en filas de la
+//           tabla ingredientes.
+// Recibe:   recetaId     → id de la receta a la que pertenecen.
+//           ingredientes → [{ nombre, cantidad, unidad, nota }]
+// Devuelve: el array de filas, listo para insertar con UNA sola llamada.
+// ---------------------------------------------------------------------
+function armarFilasIngredientes(recetaId, ingredientes) {
+  return ingredientes.map((ing, i) => ({
+    receta_id: recetaId,
+    orden: i + 1,            // el orden se guarda explícito: SQL no garantiza orden
+    nombre: ing.nombre,
+    cantidad: ing.cantidad,  // null si es "a gusto"
+    unidad: ing.unidad || null,
+    nota: ing.nota || null
+  }));
+}
+
+
+// ---------------------------------------------------------------------
+// subirImagenesYArmarFilasPasos(carpeta, recetaId, pasos, marca, rutasSubidas)
+//
+// Qué hace: recorre los pasos, sube las imágenes NUEVAS y arma las
+//           filas de la tabla pasos.
+// Recibe:   carpeta      → "{usuario_id}/{receta_id}".
+//           recetaId     → id de la receta.
+//           pasos        → [{ descripcion, imagen, imagenActual, quitarImagen }]
+//                          imagen:       File nuevo, o null.
+//                          imagenActual: ruta que ya tenía (solo al editar).
+//                          quitarImagen: true si se pidió quitarla (solo al editar).
+//           marca        → número único (Date.now()).
+//           rutasSubidas → array donde se anotan las imágenes subidas,
+//                          por si después hay que borrarlas.
+// Devuelve: el array de filas para insertar en la tabla pasos.
+//
+// Qué imagen queda en cada paso:
+//   - Si eligió una imagen nueva → la nueva (reemplaza a la actual).
+//   - Si no, y marcó "quitar"    → ninguna (null).
+//   - Si no, y no tocó nada      → la que ya tenía (o null si no tenía).
+// Al crear una receta, imagenActual y quitarImagen no existen
+// (undefined), así que se cumple el último caso con null.
+// ---------------------------------------------------------------------
+async function subirImagenesYArmarFilasPasos(carpeta, recetaId, pasos, marca, rutasSubidas) {
+  const filasPasos = [];
+
+  // entries() devuelve pares [posición, elemento] para usar en for...of.
+  // Se usa for...of (y no forEach) porque adentro hay await: forEach no
+  // espera a las funciones async.
+  for (const [i, paso] of pasos.entries()) {
+    let rutaImagen = paso.quitarImagen ? null : (paso.imagenActual || null);
+
+    if (paso.imagen) {
+      rutaImagen = armarRutaImagen(carpeta, `pasos/paso-${i + 1}`, paso.imagen, marca);
+      await subirImagen(rutaImagen, paso.imagen);
+      rutasSubidas.push(rutaImagen); // se anota por si hay que borrarla
+    }
+
+    filasPasos.push({
+      receta_id: recetaId,
+      numero: i + 1,          // los pasos se numeran desde 1
+      descripcion: paso.descripcion,
+      imagen: rutaImagen
+    });
+  }
+
+  return filasPasos;
+}
+
+
 // ---------------------------------------------------------------------
 // guardarReceta(datos)
 //
-// Qué hace: guarda una receta COMPLETA en Supabase: la receta, su
-//           imagen principal, sus ingredientes y sus pasos (con sus
+// Qué hace: guarda una receta NUEVA y COMPLETA en Supabase: la receta,
+//           su imagen principal, sus ingredientes y sus pasos (con sus
 //           imágenes opcionales).
 //
 // Recibe:   datos = {
@@ -117,25 +254,9 @@ async function guardarReceta(datos) {
 
   // ---- Validaciones previas ----
   // Si alguna imagen es inválida, el error corta acá y no se crea nada.
-  // La imagen principal es opcional: solo se valida si se eligió una.
-  if (datos.imagenPrincipal) {
-    validarImagen(datos.imagenPrincipal, 'Imagen principal');
-  }
+  validarImagenesDeReceta(datos);
 
-  // forEach recorre los pasos; i es la posición (empieza en 0).
-  datos.pasos.forEach((paso, i) => {
-    if (paso.imagen) {
-      validarImagen(paso.imagen, `Paso ${i + 1}`);
-    }
-  });
-
-  // ---- ¿Quién está guardando? ----
-  // Hace falta el id del usuario para armar la carpeta de las imágenes.
-  const sesion = await obtenerSesion();
-  if (!sesion) {
-    throw new Error('La sesión expiró. Vuelva a iniciar sesión.');
-  }
-  const usuarioId = sesion.user.id;
+  const usuarioId = await obtenerUsuarioId();
 
   // Variables para recordar qué se creó, por si hay que deshacerlo.
   // Se declaran con let porque cambian durante el proceso.
@@ -163,44 +284,21 @@ async function guardarReceta(datos) {
     // ================= 2. SUBIR LAS IMÁGENES =================
     // Carpeta de esta receta, con el formato que exigen las políticas.
     const carpeta = `${usuarioId}/${recetaId}`;
-
-    // Date.now() = milisegundos desde 1970. Se usa como nombre único del
-    // archivo, en lugar del nombre original, que puede tener espacios o
-    // tildes que complican las rutas.
-    const marca = Date.now();
+    const marca = Date.now(); // milisegundos desde 1970: número único
 
     // -- Imagen principal (opcional) --
     // let porque cambia: queda en null si el usuario no eligió imagen.
     let rutaPrincipal = null;
     if (datos.imagenPrincipal) {
-      const extPrincipal = EXTENSIONES_PERMITIDAS[datos.imagenPrincipal.type];
-      rutaPrincipal = `${carpeta}/principal-${marca}.${extPrincipal}`;
+      rutaPrincipal = armarRutaImagen(carpeta, 'principal', datos.imagenPrincipal, marca);
       await subirImagen(rutaPrincipal, datos.imagenPrincipal);
       rutasSubidas.push(rutaPrincipal); // se anota por si hay que borrarla
     }
 
-    // -- Imágenes de los pasos --
-    // Mientras se recorren los pasos, se arma el array de filas que se
-    // va a insertar en la tabla pasos.
-    // entries() devuelve pares [posición, elemento] para usar en for...of.
-    const filasPasos = [];
-    for (const [i, paso] of datos.pasos.entries()) {
-      let rutaImagen = null; // null = este paso no tiene imagen
-
-      if (paso.imagen) {
-        const ext = EXTENSIONES_PERMITIDAS[paso.imagen.type];
-        rutaImagen = `${carpeta}/pasos/paso-${i + 1}-${marca}.${ext}`;
-        await subirImagen(rutaImagen, paso.imagen);
-        rutasSubidas.push(rutaImagen);
-      }
-
-      filasPasos.push({
-        receta_id: recetaId,
-        numero: i + 1,          // los pasos se numeran desde 1
-        descripcion: paso.descripcion,
-        imagen: rutaImagen
-      });
-    }
+    // -- Imágenes de los pasos (y filas de la tabla pasos) --
+    const filasPasos = await subirImagenesYArmarFilasPasos(
+      carpeta, recetaId, datos.pasos, marca, rutasSubidas
+    );
 
     // ================= 3. GUARDAR EN LAS TABLAS =================
 
@@ -217,21 +315,11 @@ async function guardarReceta(datos) {
     }
 
     // -- Ingredientes --
-    // map transforma cada ingrediente del formulario en una fila de la
-    // tabla. Insertar el array completo hace UNA sola llamada a la base,
-    // en lugar de una por ingrediente.
-    const filasIngredientes = datos.ingredientes.map((ing, i) => ({
-      receta_id: recetaId,
-      orden: i + 1,            // el orden se guarda explícito: SQL no garantiza orden
-      nombre: ing.nombre,
-      cantidad: ing.cantidad,  // null si es "a gusto"
-      unidad: ing.unidad || null,
-      nota: ing.nota || null
-    }));
-
+    // Insertar el array completo hace UNA sola llamada a la base, en
+    // lugar de una por ingrediente.
     const { error: errorIngredientes } = await supabaseClient
       .from('ingredientes')
-      .insert(filasIngredientes);
+      .insert(armarFilasIngredientes(recetaId, datos.ingredientes));
     if (errorIngredientes) throw errorIngredientes;
 
     // -- Pasos --
@@ -277,6 +365,228 @@ async function deshacerReceta(recetaId, rutasSubidas) {
     // Si la limpieza falla, solo se registra en la consola. No se
     // relanza: el error que importa mostrarle al usuario es el original.
     console.error('No se pudo deshacer la receta incompleta:', errorLimpieza);
+  }
+}
+
+
+
+// =====================================================================
+// EDICIÓN DE UNA RECETA
+// =====================================================================
+
+
+// ---------------------------------------------------------------------
+// actualizarReceta(recetaOriginal, datos)
+//
+// Qué hace: guarda los cambios de una receta que ya existe: datos
+//           generales, imagen principal, ingredientes, pasos y sus
+//           imágenes.
+//
+// Recibe:   recetaOriginal → la receta como estaba antes de editar
+//                            (la de traerRecetaPorId). Se usa para
+//                            saber qué filas e imágenes viejas borrar.
+//           datos = {
+//             titulo, descripcion, esPublica,
+//             imagenPrincipal:       File nuevo o null,
+//             quitarImagenPrincipal: true si se pidió quitar la actual,
+//             ingredientes:          [{ nombre, cantidad, unidad, nota }],
+//             pasos:                 [{ descripcion, imagen: File o null,
+//                                       imagenActual: ruta o null,
+//                                       quitarImagen: true o false }]
+//           }
+// Devuelve: nada. Si algo falla, lanza un error.
+//
+// ESTRATEGIA para ingredientes y pasos: en lugar de comparar fila por
+// fila qué cambió, se reemplazan todos: se INSERTAN los nuevos y, si
+// eso salió bien, se BORRAN los viejos (por su id). En ese orden,
+// porque si falla el insert, la receta conserva sus datos anteriores
+// en vez de quedar vacía.
+//
+// ORDEN COMPLETO:
+//   1) Subir las imágenes nuevas.
+//   2) Insertar los ingredientes y pasos nuevos.
+//   3) Borrar los ingredientes y pasos viejos.
+//   4) Actualizar la receta (título, descripción, visibilidad, imagen).
+//   5) Borrar de Storage las imágenes viejas que ya no se usan.
+//
+// Manejo de errores: si algo falla antes de borrar los ingredientes
+// viejos, se deshace todo (se borran las filas insertadas y las
+// imágenes subidas) y la receta queda exactamente como estaba. Después
+// de ese punto ya hay cambios que no se pueden revertir desde el
+// navegador, así que se avisa que el guardado quedó a medias.
+//
+// (La forma de lograr un "todo o nada" real sería una función SQL en
+// Supabase, que corre dentro de una transacción. Queda como mejora.)
+// ---------------------------------------------------------------------
+async function actualizarReceta(recetaOriginal, datos) {
+
+  // ---- Validaciones previas ----
+  validarImagenesDeReceta(datos);
+
+  const usuarioId = await obtenerUsuarioId();
+  const recetaId = recetaOriginal.id;
+  const carpeta = `${usuarioId}/${recetaId}`;
+  const marca = Date.now();
+
+  // Para deshacer, si hace falta.
+  const rutasSubidas = [];
+  let idsIngredientesNuevos = [];
+  let idsPasosNuevos = [];
+
+  // false mientras todavía se puede deshacer todo.
+  let huboCambiosSinVuelta = false;
+
+  try {
+    // ================= 1. IMÁGENES NUEVAS =================
+
+    // -- Imagen principal: cuál queda --
+    //   eligió una nueva → la nueva; marcó quitar → null;
+    //   no tocó nada → la que ya tenía.
+    let rutaPrincipal = datos.quitarImagenPrincipal ? null : recetaOriginal.imagen_principal;
+    if (datos.imagenPrincipal) {
+      rutaPrincipal = armarRutaImagen(carpeta, 'principal', datos.imagenPrincipal, marca);
+      await subirImagen(rutaPrincipal, datos.imagenPrincipal);
+      rutasSubidas.push(rutaPrincipal);
+    }
+
+    // -- Imágenes de los pasos (y filas nuevas de la tabla pasos) --
+    const filasPasos = await subirImagenesYArmarFilasPasos(
+      carpeta, recetaId, datos.pasos, marca, rutasSubidas
+    );
+
+    // ================= 2. INSERTAR FILAS NUEVAS =================
+    // .select('id') devuelve los ids de las filas insertadas: hacen
+    // falta para borrarlas si algo falla después.
+    const { data: ingredientesNuevos, error: errorIngredientes } = await supabaseClient
+      .from('ingredientes')
+      .insert(armarFilasIngredientes(recetaId, datos.ingredientes))
+      .select('id');
+    if (errorIngredientes) throw errorIngredientes;
+    idsIngredientesNuevos = ingredientesNuevos.map((fila) => fila.id);
+
+    const { data: pasosNuevos, error: errorPasos } = await supabaseClient
+      .from('pasos')
+      .insert(filasPasos)
+      .select('id');
+    if (errorPasos) throw errorPasos;
+    idsPasosNuevos = pasosNuevos.map((fila) => fila.id);
+
+    // ================= 3. BORRAR FILAS VIEJAS =================
+    // .in('id', [...]) = WHERE id IN (...): borra varias en una llamada.
+    const idsIngredientesViejos = recetaOriginal.ingredientes.map((ing) => ing.id);
+    if (idsIngredientesViejos.length > 0) {
+      const { error } = await supabaseClient
+        .from('ingredientes')
+        .delete()
+        .in('id', idsIngredientesViejos);
+      if (error) throw error;
+    }
+
+    // Desde acá, los ingredientes viejos ya no existen: los cambios ya
+    // no se pueden deshacer.
+    huboCambiosSinVuelta = true;
+
+    const idsPasosViejos = recetaOriginal.pasos.map((paso) => paso.id);
+    if (idsPasosViejos.length > 0) {
+      const { error } = await supabaseClient
+        .from('pasos')
+        .delete()
+        .in('id', idsPasosViejos);
+      if (error) throw error;
+    }
+
+    // ================= 4. ACTUALIZAR LA RECETA =================
+    // updated_at no se envía: lo actualiza solo el trigger de la base.
+    const { error: errorReceta } = await supabaseClient
+      .from('recetas')
+      .update({
+        titulo: datos.titulo,
+        descripcion: datos.descripcion || null,
+        es_publica: datos.esPublica,
+        imagen_principal: rutaPrincipal
+      })
+      .eq('id', recetaId);
+    if (errorReceta) throw errorReceta;
+
+    // ================= 5. BORRAR IMÁGENES QUE YA NO SE USAN =================
+    // Imágenes que tenía antes la receta...
+    const rutasViejas = [
+      recetaOriginal.imagen_principal,
+      ...recetaOriginal.pasos.map((paso) => paso.imagen)
+    ].filter(Boolean);
+
+    // ...e imágenes que tiene ahora.
+    const rutasEnUso = [rutaPrincipal, ...filasPasos.map((fila) => fila.imagen)];
+
+    // Se borran las viejas que ya no están en uso (reemplazadas o quitadas).
+    const rutasParaBorrar = rutasViejas.filter((ruta) => !rutasEnUso.includes(ruta));
+    await borrarImagenesSinUso(rutasParaBorrar);
+
+  } catch (error) {
+    if (!huboCambiosSinVuelta) {
+      // Todavía no se tocó nada viejo: se deshace todo y la receta
+      // queda como estaba.
+      await deshacerEdicion(idsIngredientesNuevos, idsPasosNuevos, rutasSubidas);
+      throw error;
+    }
+
+    // Ya se borraron datos viejos: el guardado quedó a medias.
+    throw new Error(
+      'Se guardó solo una parte de los cambios. Abra la receta, revísela ' +
+      'y vuelva a editarla. (' + error.message + ')'
+    );
+  }
+}
+
+
+// ---------------------------------------------------------------------
+// borrarImagenesSinUso(rutas)
+//
+// Qué hace: borra de Storage las imágenes que la receta ya no usa.
+// Recibe:   rutas → array de rutas (puede estar vacío).
+// Devuelve: nada.
+//
+// Si falla, solo se registra en la consola y NO se lanza el error: los
+// cambios de la receta ya se guardaron bien, y una imagen que quedó sin
+// borrar no afecta lo que ve el usuario (solo ocupa espacio).
+// ---------------------------------------------------------------------
+async function borrarImagenesSinUso(rutas) {
+  if (rutas.length === 0) {
+    return;
+  }
+
+  const { error } = await supabaseClient.storage.from(BUCKET_IMAGENES).remove(rutas);
+  if (error) {
+    console.error('No se pudieron borrar imágenes viejas:', error);
+  }
+}
+
+
+// ---------------------------------------------------------------------
+// deshacerEdicion(idsIngredientes, idsPasos, rutasSubidas)
+//
+// Qué hace: si la edición falla antes de tocar los datos viejos, borra
+//           lo nuevo que se alcanzó a crear, así la receta queda
+//           exactamente como estaba.
+// Recibe:   idsIngredientes → ids de los ingredientes nuevos insertados.
+//           idsPasos        → ids de los pasos nuevos insertados.
+//           rutasSubidas    → rutas de las imágenes nuevas subidas.
+// Devuelve: nada. Si la limpieza falla, solo se registra en la consola:
+//           el error que importa mostrar es el original.
+// ---------------------------------------------------------------------
+async function deshacerEdicion(idsIngredientes, idsPasos, rutasSubidas) {
+  try {
+    if (idsIngredientes.length > 0) {
+      await supabaseClient.from('ingredientes').delete().in('id', idsIngredientes);
+    }
+    if (idsPasos.length > 0) {
+      await supabaseClient.from('pasos').delete().in('id', idsPasos);
+    }
+    if (rutasSubidas.length > 0) {
+      await supabaseClient.storage.from(BUCKET_IMAGENES).remove(rutasSubidas);
+    }
+  } catch (errorLimpieza) {
+    console.error('No se pudo deshacer la edición:', errorLimpieza);
   }
 }
 
@@ -474,8 +784,8 @@ async function eliminarReceta(receta) {
 //           {
 //             id, titulo, descripcion, imagen_principal, es_publica,
 //             created_at, usuario_id,
-//             ingredientes: [{ orden, nombre, cantidad, unidad, nota }, ...],
-//             pasos:        [{ numero, descripcion, imagen }, ...]
+//             ingredientes: [{ id, orden, nombre, cantidad, unidad, nota }, ...],
+//             pasos:        [{ id, numero, descripcion, imagen }, ...]
 //           }
 //           o null si la receta no existe o el usuario no tiene permiso
 //           para verla (las políticas RLS la "esconden").
@@ -498,8 +808,8 @@ async function traerRecetaPorId(id) {
     .from('recetas')
     .select(`
       id, titulo, descripcion, imagen_principal, es_publica, created_at, usuario_id,
-      ingredientes ( orden, nombre, cantidad, unidad, nota ),
-      pasos ( numero, descripcion, imagen )
+      ingredientes ( id, orden, nombre, cantidad, unidad, nota ),
+      pasos ( id, numero, descripcion, imagen )
     `)
     .eq('id', id)
     .order('orden', { referencedTable: 'ingredientes', ascending: true })

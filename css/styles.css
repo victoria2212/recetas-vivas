@@ -478,3 +478,43 @@ button:disabled {
 .confirmacion p {
   margin: 0 0 0.5rem;
 }
+
+
+/* =====================================================================
+   EDITAR RECETA (nueva-receta.html en modo edición)
+   ===================================================================== */
+
+/* Imagen actual (principal o de un paso) con la opción de quitarla */
+.imagen-actual {
+  margin-top: 0.75rem;
+}
+
+/* En la fila del paso, el bloque ocupa todo el ancho de la grilla */
+.fila-paso .imagen-actual {
+  grid-column: 1 / -1;
+  margin-top: 0;
+}
+
+.miniatura {
+  display: block;
+  max-width: 160px;
+  border-radius: 6px;
+}
+
+/* La etiqueta "Quitar..." pegada a la imagen */
+.imagen-actual .opcion {
+  margin-top: 0.25rem;
+}
+
+.texto-ayuda {
+  margin: 0 0 0.25rem;
+  font-size: 0.9rem;
+  color: #555;
+}
+
+/* Guardar y Cancelar en la misma fila */
+.acciones-formulario {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
