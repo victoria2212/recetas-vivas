@@ -60,6 +60,27 @@
           <span id="etiqueta-visibilidad" class="etiqueta"></span>
           <h1 id="titulo-receta"></h1>
           <p id="descripcion-receta"></p>
+
+          <!-- Acciones del DUEÑO de la receta. Empiezan ocultas:
+               JavaScript las muestra solo si el usuario logueado es el
+               dueño. Ocultarlas es solo para la interfaz: la protección
+               real la dan las políticas RLS de Supabase. -->
+          <div id="acciones-propietario" class="acciones-receta" hidden>
+            <button id="btn-eliminar" type="button" class="boton-peligro">Eliminar receta</button>
+          </div>
+
+          <!-- Confirmación dentro de la página (la consigna no permite
+               alert, prompt ni confirm). role="alertdialog" avisa a los
+               lectores de pantalla que es una pregunta importante. -->
+          <div id="confirmar-eliminar" class="confirmacion" role="alertdialog"
+               aria-labelledby="texto-confirmar" hidden>
+            <p id="texto-confirmar"></p>
+            <p id="error-eliminar" class="error" hidden></p>
+            <div class="acciones-receta">
+              <button id="btn-confirmar-eliminar" type="button" class="boton-peligro relleno">Sí, eliminar</button>
+              <button id="btn-cancelar-eliminar" type="button">Cancelar</button>
+            </div>
+          </div>
         </div>
       </div>
 

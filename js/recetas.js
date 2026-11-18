@@ -392,6 +392,73 @@ async function obtenerUrlsDeImagenes(rutas) {
 
 
 // =====================================================================
+// ELIMINACIÓN DE UNA RECETA
+// =====================================================================
+
+
+// ---------------------------------------------------------------------
+// eliminarReceta(receta)
+//
+// Qué hace: borra una receta completa: sus imágenes de Storage y la
+//           receta (que arrastra sus ingredientes y pasos).
+// Recibe:   receta → el objeto que devuelve traerRecetaPorId(), con
+//                    id, imagen_principal y pasos (para saber qué
+//                    imágenes borrar).
+// Devuelve: nada. Si algo falla, lanza un error.
+//
+// ORDEN: primero las imágenes, después la receta. ¿Por qué?
+//   - Storage NO se borra en cascada: si se borra solo la receta, las
+//     imágenes quedan "huérfanas", ocupando espacio para siempre.
+//   - Para borrar archivos, Storage exige poder VERLOS, y la política
+//     "imagenes: ver si la receta es visible" pide que la receta
+//     exista. Si se borrara primero la receta, las imágenes ya no se
+//     podrían ver ni, por lo tanto, borrar.
+//
+// Ingredientes y pasos no se borran a mano: se van solos gracias al
+// "on delete cascade" de sus claves foráneas (ver el esquema SQL).
+// ---------------------------------------------------------------------
+async function eliminarReceta(receta) {
+
+  // ---- 1. Imágenes ----
+  // Rutas de la imagen principal y de los pasos. filter(Boolean)
+  // descarta los null (receta o pasos sin imagen).
+  const rutas = [
+    receta.imagen_principal,
+    ...receta.pasos.map((paso) => paso.imagen)
+  ].filter(Boolean);
+
+  if (rutas.length > 0) {
+    const { error: errorImagenes } = await supabaseClient.storage
+      .from(BUCKET_IMAGENES)
+      .remove(rutas); // borra todas en UNA sola llamada
+
+    if (errorImagenes) {
+      throw errorImagenes;
+    }
+  }
+
+  // ---- 2. Receta (y en cascada, sus ingredientes y pasos) ----
+  // .select('id') le pide a la base que devuelva las filas borradas.
+  // Hace falta porque, si RLS no permite borrar (la receta no es del
+  // usuario), Supabase NO da error: simplemente no borra nada. La única
+  // forma de enterarse es ver que volvieron 0 filas.
+  const { data: borradas, error: errorReceta } = await supabaseClient
+    .from('recetas')
+    .delete()
+    .eq('id', receta.id)
+    .select('id');
+
+  if (errorReceta) {
+    throw errorReceta;
+  }
+  if (borradas.length === 0) {
+    throw new Error('La receta no existe o no le pertenece.');
+  }
+}
+
+
+
+// =====================================================================
 // LECTURA DE UNA RECETA (detalle)
 // =====================================================================
 

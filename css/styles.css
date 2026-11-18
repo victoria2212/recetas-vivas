@@ -10,6 +10,13 @@
   box-sizing: border-box;
 }
 
+/* El atributo hidden oculta un elemento, pero si una clase le da
+   display: flex o grid, la clase gana y el elemento se sigue viendo.
+   Esta regla asegura que hidden SIEMPRE oculte. */
+[hidden] {
+  display: none !important;
+}
+
 body {
   margin: 0;
   font-family: system-ui, sans-serif;
@@ -405,11 +412,6 @@ button:disabled {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
 }
 
-/* El atributo hidden debe ganarle al display del navegador */
-.historial-busquedas[hidden] {
-  display: none;
-}
-
 .titulo-historial {
   padding: 0.25rem 0.75rem;
   font-size: 0.8rem;
@@ -437,4 +439,42 @@ button:disabled {
   font-size: 0.85rem;
   color: #b00020;
   border-top: 1px solid #eee;
+}
+
+
+/* =====================================================================
+   ELIMINAR RECETA (receta.html)
+   ===================================================================== */
+
+/* Fila de botones: Eliminar / Sí, eliminar + Cancelar */
+.acciones-receta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+/* Botón de acción peligrosa: borde y texto rojos */
+.boton-peligro {
+  border-color: #b00020;
+  color: #b00020;
+}
+
+/* Variante rellena para el "Sí, eliminar" definitivo */
+.boton-peligro.relleno {
+  background: #b00020;
+  color: #fff;
+}
+
+/* Recuadro de confirmación: fondo rosado suave para llamar la atención */
+.confirmacion {
+  margin-top: 1rem;
+  padding: 1rem;
+  border: 1px solid #f0b4bd;
+  border-radius: 8px;
+  background: #fdf1f3;
+}
+
+.confirmacion p {
+  margin: 0 0 0.5rem;
 }

@@ -59,19 +59,33 @@ function mostrarError(texto) {
 
 
 // -----------------------------------------------------------------
-// mostrarAvisoSiSeGuardo()
-// Qué hace: si la página se abrió con ?guardada=1 (viene de guardar
-//           una receta), muestra el aviso verde.
+// mostrarAvisoSegunDireccion()
+// Qué hace: muestra el aviso verde según de dónde se viene:
+//           ?guardada=1  → viene de guardar una receta.
+//           ?eliminada=1 → viene de eliminar una receta.
 //
 // URLSearchParams lee los parámetros que van después del "?" en la
 // dirección. history.replaceState limpia la dirección para que el
 // aviso no vuelva a aparecer si se recarga la página.
 // -----------------------------------------------------------------
-function mostrarAvisoSiSeGuardo() {
+function mostrarAvisoSegunDireccion() {
   const parametros = new URLSearchParams(window.location.search);
+  const mensajeExito = document.getElementById('mensaje-exito');
 
-  if (parametros.get('guardada') === '1') {
-    document.getElementById('mensaje-exito').hidden = false;
+  // Objeto que relaciona cada parámetro con su mensaje. Así, para
+  // sumar un aviso nuevo alcanza con agregar una línea acá.
+  const avisos = {
+    guardada: 'Receta guardada correctamente.',
+    eliminada: 'Receta eliminada.'
+  };
+
+  // Object.keys devuelve las claves: ['guardada', 'eliminada'].
+  // find se queda con la PRIMERA que venga en la dirección con valor '1'.
+  const clave = Object.keys(avisos).find((nombre) => parametros.get(nombre) === '1');
+
+  if (clave) {
+    mensajeExito.textContent = avisos[clave];
+    mensajeExito.hidden = false;
     history.replaceState(null, '', 'app.html');
   }
 }
@@ -573,7 +587,7 @@ async function cargarRecetas() {
 // iniciarPagina()
 // Qué hace: 1) verifica la sesión (sin sesión, vuelve al inicio);
 //           2) recupera la última búsqueda en el buscador;
-//           3) saluda y muestra el aviso de "receta guardada";
+//           3) saluda y muestra el aviso ("receta guardada" o "eliminada");
 //           4) carga el listado.
 //
 // La búsqueda se recupera ANTES de cargar, para que el listado ya
@@ -584,7 +598,7 @@ async function iniciarPagina() {
   if (!sesion) return;
 
   buscador.value = leerBusquedaGuardada();
-  mostrarAvisoSiSeGuardo();
+  mostrarAvisoSegunDireccion();
 
   // Saludo y listado son independientes: se ejecutan a la vez.
   // Promise.all espera a que terminen ambos.
