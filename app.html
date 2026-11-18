@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Recetas Vivas · Mis recetas</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <header>
+    <span id="saludo">Cargando...</span>
+    <button id="btn-salir" type="button">Cerrar sesión</button>
+  </header>
+
+  <main>
+    <h1>Mis recetas</h1>
+    <p>Página privada: solo se ve con la sesión iniciada.</p>
+    <p id="mensaje-error" hidden></p>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/config.js"></script>
+  <script src="js/auth.js"></script>
+
+  <script>
+    const saludo = document.getElementById('saludo');
+    const mensajeError = document.getElementById('mensaje-error');
+
+    function mostrarError(texto) {
+      mensajeError.textContent = texto;
+      mensajeError.hidden = false;
+    }
+
+    async function iniciarPagina() {
+      // 1. Sin sesión, vuelve al inicio.
+      const sesion = await protegerPagina();
+      if (!sesion) return;
+
+      // 2. Lee el perfil propio desde la tabla perfiles.
+      //    Esto prueba tres cosas a la vez:
+      //    - que el trigger creó el perfil al registrarse,
+      //    - que la política RLS deja ver el perfil propio,
+      //    - que la conexión con la base de datos funciona.
+      const { data: perfil, error } = await supabaseClient
+        .from('perfiles')
+        .select('nombre')
+        .eq('id', sesion.user.id)
+        .single();
+
+      if (error) {
+        console.error(error);
+        mostrarError('Sesión iniciada, pero no se pudo leer el perfil: ' + error.message);
+        saludo.textContent = sesion.user.email;
+        return;
+      }
+
+      saludo.textContent = 'Hola, ' + perfil.nombre;
+    }
+
+    document.getElementById('btn-salir').addEventListener('click', cerrarSesion);
+
+    iniciarPagina().catch((error) => {
+      console.error(error);
+      mostrarError('Ocurrió un error al cargar la página.');
+    });
+  </script>
+</body>
+</html>
