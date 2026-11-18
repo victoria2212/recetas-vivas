@@ -1,0 +1,144 @@
+/* =====================================================================
+   styles.css · Estilos base provisorios (Sprint 1)
+   Solo para que las páginas sean usables. Se reemplazan con el diseño
+   definitivo de las interfaces.
+   ===================================================================== */
+
+/* box-sizing: border-box hace que el ancho incluya el borde y el
+   relleno, así los elementos no "se pasan" del tamaño indicado. */
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: system-ui, sans-serif;
+  line-height: 1.5;
+  color: #222;
+}
+
+/* Barra superior: saludo/enlace a la izquierda, botón a la derecha */
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #ddd;
+}
+
+/* Contenido centrado, con ancho máximo para que se lea cómodo */
+main {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 1rem;
+}
+
+/* ---- Formulario ---- */
+
+fieldset {
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  margin-bottom: 1.25rem;
+  padding: 1rem;
+}
+
+legend {
+  font-weight: 600;
+  padding: 0 0.25rem;
+}
+
+label {
+  display: block;
+  margin-top: 0.75rem;
+}
+
+input[type="text"],
+input[type="number"],
+textarea {
+  width: 100%;
+  padding: 0.5rem;
+  font: inherit;
+  border: 1px solid #bbb;
+  border-radius: 6px;
+}
+
+/* Casilla de "pública" con su texto al lado */
+.opcion {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.vista-previa {
+  display: block;
+  max-width: 240px;
+  margin-top: 0.5rem;
+  border-radius: 6px;
+}
+
+/* Fila de ingrediente en grilla: cantidad | unidad | nombre | nota | ✕ */
+.fila-ingrediente {
+  display: grid;
+  grid-template-columns: 80px 100px 1fr 1fr auto;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+/* Fila de paso: la descripción ocupa todo el ancho arriba;
+   la imagen y el ✕ quedan abajo */
+.fila-paso {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.fila-paso textarea {
+  grid-column: 1 / -1; /* de la primera a la última columna */
+}
+
+.paso-imagen-label {
+  margin-top: 0;
+  font-size: 0.9rem;
+}
+
+/* En pantallas angostas (celular) los campos del ingrediente se apilan */
+@media (max-width: 600px) {
+  .fila-ingrediente {
+    grid-template-columns: 1fr 1fr;
+  }
+  .fila-ingrediente .ing-nombre,
+  .fila-ingrediente .ing-nota {
+    grid-column: 1 / -1;
+  }
+}
+
+/* ---- Botones y mensajes ---- */
+
+/* .boton hace que un enlace <a> se vea igual que un botón */
+button,
+.boton {
+  display: inline-block;
+  padding: 0.5rem 1rem;
+  font: inherit;
+  border: 1px solid #444;
+  border-radius: 6px;
+  background: #fff;
+  color: inherit;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+/* Botón desactivado mientras se guarda */
+button:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.error {
+  color: #b00020;
+}
+
+.exito {
+  color: #1b6e2e;
+}

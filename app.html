@@ -15,7 +15,11 @@
   <main>
     <h1>Mis recetas</h1>
     <p>Página privada: solo se ve con la sesión iniciada.</p>
-    <p id="mensaje-error" hidden></p>
+    <a href="nueva-receta.html" class="boton">+ Nueva receta</a>
+
+    <!-- Aviso que aparece al volver de guardar una receta -->
+    <p id="mensaje-exito" class="exito" hidden>Receta guardada correctamente.</p>
+    <p id="mensaje-error" class="error" hidden></p>
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -26,21 +30,50 @@
     const saludo = document.getElementById('saludo');
     const mensajeError = document.getElementById('mensaje-error');
 
+
+    // -----------------------------------------------------------------
+    // mostrarError(texto)
+    // Qué hace: escribe el mensaje en el párrafo de error y lo muestra.
+    // -----------------------------------------------------------------
     function mostrarError(texto) {
       mensajeError.textContent = texto;
       mensajeError.hidden = false;
     }
 
+
+    // -----------------------------------------------------------------
+    // mostrarAvisoSiSeGuardo()
+    // Qué hace: si la página se abrió con ?guardada=1 (viene de guardar
+    //           una receta), muestra el aviso verde.
+    //
+    // URLSearchParams lee los parámetros que van después del "?" en la
+    // dirección. history.replaceState limpia la dirección para que el
+    // aviso no vuelva a aparecer si se recarga la página.
+    // -----------------------------------------------------------------
+    function mostrarAvisoSiSeGuardo() {
+      const parametros = new URLSearchParams(window.location.search);
+
+      if (parametros.get('guardada') === '1') {
+        document.getElementById('mensaje-exito').hidden = false;
+        history.replaceState(null, '', 'app.html');
+      }
+    }
+
+
+    // -----------------------------------------------------------------
+    // iniciarPagina()
+    // Qué hace: 1) verifica la sesión (sin sesión, vuelve al inicio);
+    //           2) lee el perfil y saluda con el nombre;
+    //           3) muestra el aviso de "receta guardada" si corresponde.
+    //
+    // Leer el perfil prueba tres cosas a la vez: que el trigger creó el
+    // perfil al registrarse, que la política RLS deja ver el perfil
+    // propio y que la conexión con la base funciona.
+    // -----------------------------------------------------------------
     async function iniciarPagina() {
-      // 1. Sin sesión, vuelve al inicio.
       const sesion = await protegerPagina();
       if (!sesion) return;
 
-      // 2. Lee el perfil propio desde la tabla perfiles.
-      //    Esto prueba tres cosas a la vez:
-      //    - que el trigger creó el perfil al registrarse,
-      //    - que la política RLS deja ver el perfil propio,
-      //    - que la conexión con la base de datos funciona.
       const { data: perfil, error } = await supabaseClient
         .from('perfiles')
         .select('nombre')
@@ -55,10 +88,14 @@
       }
 
       saludo.textContent = 'Hola, ' + perfil.nombre;
+      mostrarAvisoSiSeGuardo();
     }
 
+
+    // EVENTOS
     document.getElementById('btn-salir').addEventListener('click', cerrarSesion);
 
+    // Arranque de la página.
     iniciarPagina().catch((error) => {
       console.error(error);
       mostrarError('Ocurrió un error al cargar la página.');
