@@ -2,20 +2,22 @@
 // js/listado.js · Página "Mis recetas" (app.html)
 
 
-// Lógica de la PÁGINA  saludar, traer el listado,
-// dibujar las tarjetas y filtrar con el buscador.
+// Lógica de la PÁGINA: saludar, traer el listado, dibujar las
+// tarjetas, filtrar con el buscador y ordenar.
 // Lo que habla con Supabase está en recetas.js.
 
 
-// Clave con la que se guarda la búsqueda en localStorage.
-
+// Claves con las que se guardan en localStorage la última búsqueda y
+// el orden elegido (ver preferencias.js).
 const CLAVE_BUSQUEDA = 'recetas-vivas:busqueda';
+const CLAVE_ORDEN = 'recetas-vivas:orden';
 
-// Clave del historial: las últimas búsquedas, guardadas como un array de textos en formato JSON.
-const CLAVE_HISTORIAL = 'recetas-vivas:historial-busquedas';
+// Órdenes posibles del listado (los value del <select id="orden">).
+const ORDENES_VALIDOS = ['recientes', 'az', 'za'];
 
-// Cuántas búsquedas recientes se recuerdan como máximo.
-const MAXIMO_HISTORIAL = 5;
+// Las últimas 5 búsquedas. HistorialBusquedas es la clase de
+// historial-busquedas.js; normalizarTexto está más abajo en este archivo.
+const historial = new HistorialBusquedas('recetas-vivas:historial-busquedas', 5, normalizarTexto);
 
 const saludo = document.getElementById('saludo');
 const mensajeError = document.getElementById('mensaje-error');
@@ -28,6 +30,7 @@ const sinResultados = document.getElementById('sin-resultados');
 const listaRecetas = document.getElementById('lista-recetas');
 const contenedorBuscador = document.getElementById('contenedor-buscador');
 const listaHistorial = document.getElementById('historial-busquedas');
+const selectOrden = document.getElementById('orden');
 
 // ESTADO de la página: los datos que llegan de la API.
 
@@ -95,94 +98,9 @@ async function saludarUsuario(sesion) {
 }
 
 
-function guardarBusqueda(texto) {
-  try {
-    localStorage.setItem(CLAVE_BUSQUEDA, texto);
-  } catch (error) {
-    console.warn('No se pudo guardar la búsqueda:', error);
-  }
-}
-
-
-function leerBusquedaGuardada() {
-  try {
-    return localStorage.getItem(CLAVE_BUSQUEDA) ?? '';
-  } catch (error) {
-    console.warn('No se pudo leer la búsqueda guardada:', error);
-    return '';
-  }
-}
-
-
-// localStorage solo guarda TEXTO. El array se guarda convertido a
-// texto JSON (JSON.stringify) y al leerlo se convierte de nuevo a
-// array (JSON.parse).
-
-function leerHistorial() {
-  try {
-    const texto = localStorage.getItem(CLAVE_HISTORIAL);
-    if (!texto) {
-      return [];
-    }
-
-    const historial = JSON.parse(texto);
-
-    // Aunque sea JSON válido, podría no ser un array de textos
-    // (por ejemplo, un número). Array.isArray lo comprueba y filter
-    // descarta cualquier elemento que no sea texto.
-    if (!Array.isArray(historial)) {
-      return [];
-    }
-    return historial
-      .filter((busqueda) => typeof busqueda === 'string')
-      .slice(0, MAXIMO_HISTORIAL);
-
-  } catch (error) {
-    console.warn('El historial guardado no es válido; se ignora:', error);
-    return [];
-  }
-}
-
-
-//  guarda el array de búsquedas en localStorage, como JSON.
-// Recibe el historial → array de textos.
-// Si localStorage falla, el historial no se guarda pero la página sigue funcionando.
-
-function guardarHistorial(historial) {
-  try {
-    localStorage.setItem(CLAVE_HISTORIAL, JSON.stringify(historial));
-  } catch (error) {
-    console.warn('No se pudo guardar el historial:', error);
-  }
-}
-
-
-function registrarBusqueda(texto) {
-  const busqueda = texto.trim();
-  if (!busqueda) {
-    return;
-  }
-
-  const normalizada = normalizarTexto(busqueda);
-
-  // filter arma un array nuevo SIN la búsqueda repetida.
-  const sinRepetida = leerHistorial().filter(
-    (anterior) => normalizarTexto(anterior) !== normalizada
-  );
-
-  
-  const historial = [busqueda, ...sinRepetida].slice(0, MAXIMO_HISTORIAL);
-  guardarHistorial(historial);
-}
-
-
 function mostrarHistorial(filtrar) {
-  const textoNormalizado = normalizarTexto(buscador.value.trim());
-
   // Operador ternario: si hay que filtrar, se filtra; si no, se usan todas.
-  const sugerencias = filtrar
-    ? leerHistorial().filter((busqueda) => normalizarTexto(busqueda).includes(textoNormalizado))
-    : leerHistorial();
+  const sugerencias = filtrar ? historial.filtrar(buscador.value) : historial.leer();
 
   listaHistorial.replaceChildren();
 
@@ -197,44 +115,34 @@ function mostrarHistorial(filtrar) {
   titulo.textContent = 'Búsquedas recientes';
   listaHistorial.appendChild(titulo);
 
-  // Una opción por búsqueda 
+  // Una opción por búsqueda y, al final, "Borrar historial".
   sugerencias.forEach((busqueda) => {
-    const item = document.createElement('li');
-    const boton = document.createElement('button');
-    boton.type = 'button';
-    boton.className = 'opcion-historial';
-    boton.textContent = busqueda;
-    boton.dataset.busqueda = busqueda; // queda como data-busqueda="..."
-    item.appendChild(boton);
-    listaHistorial.appendChild(item);
+    listaHistorial.appendChild(crearItemHistorial(busqueda, 'opcion-historial', { busqueda }));
   });
-
-  // Botón para borrar todo el historial
-  const itemBorrar = document.createElement('li');
-  const botonBorrar = document.createElement('button');
-  botonBorrar.type = 'button';
-  botonBorrar.className = 'borrar-historial';
-  botonBorrar.textContent = 'Borrar historial';
-  botonBorrar.dataset.accion = 'borrar';
-  itemBorrar.appendChild(botonBorrar);
-  listaHistorial.appendChild(itemBorrar);
+  listaHistorial.appendChild(crearItemHistorial('Borrar historial', 'borrar-historial', { accion: 'borrar' }));
 
   listaHistorial.hidden = false;
 }
 
 
-function ocultarHistorial() {
-  listaHistorial.hidden = true;
+// Arma un <li> con un botón adentro, para la lista del historial.
+// Recibe el texto del botón, su clase y los datos que se guardan en
+// data-* (por ejemplo { busqueda: 'pan' } → data-busqueda="pan").
+// Object.assign copia esos datos dentro de boton.dataset.
+function crearItemHistorial(texto, clase, datos) {
+  const item = document.createElement('li');
+  const boton = document.createElement('button');
+  boton.type = 'button';
+  boton.className = clase;
+  boton.textContent = texto;
+  Object.assign(boton.dataset, datos);
+  item.appendChild(boton);
+  return item;
 }
 
 
-function borrarHistorial() {
-  try {
-    localStorage.removeItem(CLAVE_HISTORIAL);
-  } catch (error) {
-    console.warn('No se pudo borrar el historial:', error);
-  }
-  ocultarHistorial();
+function ocultarHistorial() {
+  listaHistorial.hidden = true;
 }
 
 
@@ -245,13 +153,14 @@ function alHacerClicEnHistorial(evento) {
   }
 
   if (boton.dataset.accion === 'borrar') {
-    borrarHistorial();
+    historial.borrar();
+    ocultarHistorial();
     return;
   }
 
   buscador.value = boton.dataset.busqueda;
   filtrarRecetas();
-  registrarBusqueda(buscador.value);
+  historial.registrar(buscador.value);
   ocultarHistorial();
 }
 
@@ -267,7 +176,7 @@ function alEscribirEnBuscador() {
 
 function alPresionarTeclaEnBuscador(evento) {
   if (evento.key === 'Enter') {
-    registrarBusqueda(buscador.value);
+    historial.registrar(buscador.value);
     ocultarHistorial();
   } else if (evento.key === 'Escape') {
     ocultarHistorial();
@@ -318,22 +227,33 @@ function crearTarjeta(receta) {
   // encodeURIComponent protege el id dentro de la dirección.
   tarjeta.href = `receta.html?id=${encodeURIComponent(receta.id)}`;
 
-  // Imagen (o un recuadro vacío si no hay URL) 
+  tarjeta.appendChild(crearImagenTarjeta(receta));
+  tarjeta.appendChild(crearCuerpoTarjeta(receta));
+  return tarjeta;
+}
+
+
+// Imagen de la tarjeta, o un recuadro "Sin imagen" si no hay URL.
+function crearImagenTarjeta(receta) {
   const url = urlsImagenes[receta.imagen_principal];
-  if (url) {
-    const imagen = document.createElement('img');
-    imagen.src = url;
-    imagen.alt = receta.titulo;
-    imagen.loading = 'lazy'; // carga la imagen recién cuando está por verse
-    tarjeta.appendChild(imagen);
-  } else {
+
+  if (!url) {
     const sinImagen = document.createElement('div');
     sinImagen.className = 'sin-imagen';
     sinImagen.textContent = 'Sin imagen';
-    tarjeta.appendChild(sinImagen);
+    return sinImagen;
   }
 
-  // Contenido de texto 
+  const imagen = document.createElement('img');
+  imagen.src = url;
+  imagen.alt = receta.titulo;
+  imagen.loading = 'lazy'; // carga la imagen recién cuando está por verse
+  return imagen;
+}
+
+
+// Parte de texto de la tarjeta: etiqueta, título y descripción.
+function crearCuerpoTarjeta(receta) {
   const cuerpo = document.createElement('div');
   cuerpo.className = 'cuerpo-tarjeta';
 
@@ -355,8 +275,7 @@ function crearTarjeta(receta) {
     cuerpo.appendChild(descripcion);
   }
 
-  tarjeta.appendChild(cuerpo);
-  return tarjeta;
+  return cuerpo;
 }
 
 
@@ -400,8 +319,41 @@ function filtrarRecetas() {
     normalizarTexto(receta.titulo).includes(textoNormalizado)
   );
 
-  dibujarRecetas(filtradas);
-  guardarBusqueda(texto);
+  dibujarRecetas(ordenarRecetas(filtradas));
+  guardarPreferencia(CLAVE_BUSQUEDA, texto);
+}
+
+
+// Devuelve la lista en el orden elegido en el <select id="orden">:
+//   recientes → como llega de la API (las más nuevas primero);
+//   az / za   → por título, alfabéticamente.
+// [...lista] hace una COPIA: sort modifica el array sobre el que se
+// usa, y así el array original no se desordena.
+// localeCompare compara textos en español: con sensitivity 'base',
+// "Budín" y "budin" quedan juntos (no importan mayúsculas ni tildes).
+function ordenarRecetas(lista) {
+  if (selectOrden.value === 'recientes') {
+    return lista;
+  }
+
+  const ordenadas = [...lista].sort((a, b) =>
+    a.titulo.localeCompare(b.titulo, 'es', { sensitivity: 'base' })
+  );
+  return selectOrden.value === 'za' ? ordenadas.reverse() : ordenadas;
+}
+
+
+// Lee el orden guardado. Si no hay uno válido, usa "recientes".
+function leerOrdenGuardado() {
+  const orden = leerPreferencia(CLAVE_ORDEN, 'recientes');
+  return ORDENES_VALIDOS.includes(orden) ? orden : 'recientes';
+}
+
+
+// Al cambiar el orden: lo guarda y vuelve a dibujar el listado.
+function alCambiarOrden() {
+  guardarPreferencia(CLAVE_ORDEN, selectOrden.value);
+  filtrarRecetas();
 }
 
 
@@ -448,18 +400,19 @@ async function cargarRecetas() {
 
 
 //  1) verifica la sesión (sin sesión, vuelve al inicio);
-//  2) recupera la última búsqueda en el buscador;
+//  2) recupera la última búsqueda y el orden elegido;
 //  3) saluda y muestra el aviso ("receta guardada" o "eliminada");
 //  4) carga el listado.
 //
-// La búsqueda se recupera ANTES de cargar, para que el listado ya
-// aparezca filtrado.
+// La búsqueda y el orden se recuperan ANTES de cargar, para que el
+// listado ya aparezca filtrado y ordenado.
 // -----------------------------------------------------------------
 async function iniciarPagina() {
   const sesion = await protegerPagina();
   if (!sesion) return;
 
-  buscador.value = leerBusquedaGuardada();
+  buscador.value = leerPreferencia(CLAVE_BUSQUEDA, '');
+  selectOrden.value = leerOrdenGuardado();
   mostrarAvisoSegunDireccion();
 
   // Saludo y listado son independientes: se ejecutan a la vez.
@@ -482,12 +435,13 @@ buscador.addEventListener('keydown', alPresionarTeclaEnBuscador);
 
 // change: se dispara al salir del campo si el texto cambió. Registra
 // la búsqueda aunque no se haya presionado Enter.
-buscador.addEventListener('change', () => registrarBusqueda(buscador.value));
+buscador.addEventListener('change', () => historial.registrar(buscador.value));
 contenedorBuscador.addEventListener('focusout', alSalirDelBuscador);
 listaHistorial.addEventListener('click', alHacerClicEnHistorial);
 
 
 listaHistorial.addEventListener('mousedown', (evento) => evento.preventDefault());
+selectOrden.addEventListener('change', alCambiarOrden);
 document.getElementById('btn-reintentar').addEventListener('click', cargarRecetas);
 document.getElementById('btn-salir').addEventListener('click', cerrarSesion);
 

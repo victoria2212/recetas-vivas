@@ -286,44 +286,44 @@ async function cargarReceta() {
       return;
     }
 
-    // Rutas de TODAS las imágenes: la principal + las de cada paso.
-    // El spread (...) "despliega" el array de rutas de los pasos
-    // dentro del array nuevo. obtenerUrlsDeImagenes descarta los null.
-    let urlsImagenes = {};
-    try {
-      urlsImagenes = await obtenerUrlsDeImagenes([
-        receta.imagen_principal,
-        ...receta.pasos.map((paso) => paso.imagen)
-      ]);
-    } catch (errorImagenes) {
-      console.error('No se pudieron cargar las imágenes:', errorImagenes);
-    }
-
-    dibujarImagenPrincipal(urlsImagenes[receta.imagen_principal], receta.titulo);
-    dibujarEncabezado(receta);
-    dibujarIngredientes(receta.ingredientes);
-    dibujarPasos(receta.pasos, urlsImagenes);
-
-    recetaActual = receta; // se guarda para poder eliminarla después
-    mostrarAccionesSiEsPropietario(receta);
-
+    // Las imágenes se piden aparte: si fallan, la receta se ve igual.
+    const urlsImagenes = await obtenerUrlsDeReceta(receta);
+    dibujarReceta(receta, urlsImagenes);
     mostrarSolo(detalleReceta);
 
   } catch (error) {
-    console.error(error);
-
-    // Si el id no tiene formato uuid, PostgreSQL responde con el
-    // código 22P02 (texto inválido para el tipo). Para el usuario
-    // eso equivale a "no existe".
-    if (error.code === '22P02') {
-      mostrarSolo(noEncontrada);
-      return;
-    }
-
-    textoErrorReceta.textContent =
-      'No se pudo cargar la receta. Revise su conexión e intente de nuevo. (' + error.message + ')';
-    mostrarSolo(errorReceta);
+    mostrarErrorDeCarga(error);
   }
+}
+
+
+// Dibuja todas las partes de la receta y muestra los botones del dueño.
+function dibujarReceta(receta, urlsImagenes) {
+  dibujarImagenPrincipal(urlsImagenes[receta.imagen_principal], receta.titulo);
+  dibujarEncabezado(receta);
+  dibujarIngredientes(receta.ingredientes);
+  dibujarPasos(receta.pasos, urlsImagenes);
+
+  recetaActual = receta; // se guarda para poder eliminarla después
+  mostrarAccionesSiEsPropietario(receta);
+}
+
+
+// Muestra el estado que corresponde cuando falla la carga.
+// Si el id no tiene formato uuid, PostgreSQL responde con el código
+// 22P02 (texto inválido para el tipo): para el usuario eso equivale a
+// "no existe". Cualquier otro error es de conexión.
+function mostrarErrorDeCarga(error) {
+  console.error(error);
+
+  if (error.code === '22P02') {
+    mostrarSolo(noEncontrada);
+    return;
+  }
+
+  textoErrorReceta.textContent =
+    'No se pudo cargar la receta. Revise su conexión e intente de nuevo. (' + error.message + ')';
+  mostrarSolo(errorReceta);
 }
 
 
