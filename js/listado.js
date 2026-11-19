@@ -25,6 +25,10 @@ const selectOrden = document.getElementById('orden');
 let recetas = [];
 let urlsImagenes = {};
 
+// para armar el link del perfil publico
+let usuarioId = null;
+let nombreParaCompartir = 'Mis recetas';
+
 
 function mostrarError(texto) {
   mensajeError.textContent = texto;
@@ -59,6 +63,7 @@ async function mostrarPerfil(sesion) {
   try {
     const perfil = await traerPerfil(sesion.user.id);
     saludo.textContent = 'Hola, ' + perfil.nombre;
+    nombreParaCompartir = perfil.nombre_emprendimiento || perfil.nombre;
     dibujarPortada(perfil);
   } catch (error) {
     console.error(error);
@@ -80,26 +85,8 @@ function dibujarPortada(perfil) {
     : 'Van a aparecer acá, arriba de sus recetas.';
   document.getElementById('portada-editar').textContent = configurado ? 'Editar' : 'Configurar';
 
-  dibujarLogo(perfil);
+  dibujarLogo(document.getElementById('portada-logo'), perfil);
   document.getElementById('portada').hidden = false;
-}
-
-
-// sin logo muestro la inicial
-function dibujarLogo(perfil) {
-  const contenedor = document.getElementById('portada-logo');
-  contenedor.replaceChildren();
-
-  const url = obtenerUrlDelLogo(perfil.logo);
-  if (url) {
-    const imagen = document.createElement('img');
-    imagen.src = url;
-    imagen.alt = 'Logo de ' + (perfil.nombre_emprendimiento ?? 'su emprendimiento');
-    contenedor.appendChild(imagen);
-    return;
-  }
-
-  contenedor.textContent = (perfil.nombre_emprendimiento ?? '').charAt(0).toUpperCase();
 }
 
 
@@ -197,58 +184,6 @@ function normalizarTexto(texto) {
 }
 
 
-function crearTarjeta(receta) {
-  const tarjeta = document.createElement('a');
-  tarjeta.className = 'tarjeta-receta';
-  tarjeta.href = `receta.html?id=${encodeURIComponent(receta.id)}`;
-
-  tarjeta.appendChild(crearImagenTarjeta(receta));
-  tarjeta.appendChild(crearCuerpoTarjeta(receta));
-  return tarjeta;
-}
-
-
-function crearImagenTarjeta(receta) {
-  const url = urlsImagenes[receta.imagen_principal];
-
-  if (!url) {
-    const sinImagen = document.createElement('div');
-    sinImagen.className = 'sin-imagen';
-    sinImagen.textContent = 'Sin imagen';
-    return sinImagen;
-  }
-
-  const imagen = document.createElement('img');
-  imagen.src = url;
-  imagen.alt = receta.titulo;
-  imagen.loading = 'lazy';
-  return imagen;
-}
-
-
-function crearCuerpoTarjeta(receta) {
-  const cuerpo = document.createElement('div');
-  cuerpo.className = 'cuerpo-tarjeta';
-
-  const etiqueta = document.createElement('span');
-  etiqueta.className = receta.es_publica ? 'etiqueta publica' : 'etiqueta privada';
-  etiqueta.textContent = receta.es_publica ? 'Pública' : 'Privada';
-  cuerpo.appendChild(etiqueta);
-
-  const titulo = document.createElement('h2');
-  titulo.textContent = receta.titulo;
-  cuerpo.appendChild(titulo);
-
-  if (receta.descripcion) {
-    const descripcion = document.createElement('p');
-    descripcion.textContent = receta.descripcion;
-    cuerpo.appendChild(descripcion);
-  }
-
-  return cuerpo;
-}
-
-
 function dibujarRecetas(lista) {
   listaRecetas.replaceChildren();
 
@@ -262,7 +197,7 @@ function dibujarRecetas(lista) {
 
 
   lista.forEach((receta) => {
-    listaRecetas.appendChild(crearTarjeta(receta));
+    listaRecetas.appendChild(crearTarjeta(receta, urlsImagenes[receta.imagen_principal]));
   });
 }
 
@@ -332,11 +267,57 @@ async function cargarRecetas() {
 }
 
 
+function mostrarAviso(texto) {
+  const mensajeExito = document.getElementById('mensaje-exito');
+  mensajeExito.textContent = texto;
+  mensajeExito.hidden = false;
+}
+
+
+// link absoluto al perfil publico, sirve igual en localhost y en vercel
+function armarLinkDelPerfil() {
+  const ruta = `perfil-publico.html?u=${encodeURIComponent(usuarioId)}`;
+  return new URL(ruta, window.location.href).href;
+}
+
+
+// en el celu abre el menu de compartir del sistema (whatsapp, instagram...)
+// si el navegador no lo tiene, copia el link al portapapeles
+async function alCompartirPerfil() {
+  mensajeError.hidden = true;
+
+  // sin recetas publicas el perfil no se puede ver (RLS), no tiene sentido compartirlo
+  if (!recetas.some((receta) => receta.es_publica)) {
+    mostrarError('Todavía no tiene recetas públicas. Marque al menos una como "Pública" para que su perfil se pueda ver.');
+    return;
+  }
+
+  const link = armarLinkDelPerfil();
+
+  try {
+    if (navigator.share) {
+      await navigator.share({ title: nombreParaCompartir, text: 'Mirá mis recetas', url: link });
+    } else {
+      await navigator.clipboard.writeText(link);
+      mostrarAviso('Link copiado. Ya puede pegarlo donde quiera compartirlo.');
+    }
+  } catch (error) {
+    // AbortError = cerro el menu de compartir sin elegir nada, no es un error
+    if (error.name === 'AbortError') {
+      return;
+    }
+    console.error(error);
+    mostrarError('No se pudo compartir. Copie este link: ' + link);
+  }
+}
+
+
 // busqueda y orden antes de cargar, asi aparece ya filtrado
 async function iniciarPagina() {
   const sesion = await protegerPagina();
   if (!sesion) return;
 
+  usuarioId = sesion.user.id;
   buscador.value = preferenciaBusqueda.leer();
   selectOrden.value = preferenciaOrden.leer();
   mostrarAvisoSegunDireccion();
@@ -361,6 +342,7 @@ listaHistorial.addEventListener('mousedown', (evento) => evento.preventDefault()
 selectOrden.addEventListener('change', alCambiarOrden);
 document.getElementById('btn-reintentar').addEventListener('click', cargarRecetas);
 document.getElementById('btn-salir').addEventListener('click', cerrarSesion);
+document.getElementById('btn-compartir').addEventListener('click', alCompartirPerfil);
 
 iniciarPagina().catch((error) => {
   console.error(error);

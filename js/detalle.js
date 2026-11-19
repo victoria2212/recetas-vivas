@@ -15,6 +15,9 @@ const errorEliminar = document.getElementById('error-eliminar');
 const btnConfirmarEliminar = document.getElementById('btn-confirmar-eliminar');
 const btnCancelarEliminar = document.getElementById('btn-cancelar-eliminar');
 
+const enlaceVolver = document.getElementById('enlace-volver');
+const btnSalir = document.getElementById('btn-salir');
+
 let usuarioActualId = null;
 let recetaActual = null;
 
@@ -228,6 +231,18 @@ function dibujarReceta(receta, urlsImagenes) {
 
   recetaActual = receta;
   mostrarAccionesSiEsPropietario(receta);
+  ajustarEnlaceVolver(receta);
+}
+
+
+// el dueño vuelve a mis recetas; cualquier otro va al perfil publico del autor
+function ajustarEnlaceVolver(receta) {
+  if (receta.usuario_id === usuarioActualId) {
+    return;
+  }
+
+  enlaceVolver.href = `perfil-publico.html?u=${encodeURIComponent(receta.usuario_id)}`;
+  enlaceVolver.textContent = '← Más recetas del autor';
 }
 
 
@@ -258,11 +273,19 @@ function mostrarAvisoSiSeEdito() {
 }
 
 
+// se puede ver sin sesion: las recetas publicas son para cualquiera.
+// si es privada y no es del usuario, RLS no la devuelve y se ve "no encontrada"
 async function iniciarPagina() {
-  const sesion = await protegerPagina();
-  if (!sesion) return;
+  const sesion = await obtenerSesion();
 
-  usuarioActualId = sesion.user.id;
+  usuarioActualId = sesion ? sesion.user.id : null;
+  btnSalir.hidden = !sesion;
+
+  if (!sesion) {
+    enlaceVolver.href = 'index.html';
+    enlaceVolver.textContent = '← Inicio';
+  }
+
   mostrarAvisoSiSeEdito();
 
   await cargarReceta();
@@ -270,7 +293,7 @@ async function iniciarPagina() {
 
 
 document.getElementById('btn-reintentar').addEventListener('click', cargarReceta);
-document.getElementById('btn-salir').addEventListener('click', cerrarSesion);
+btnSalir.addEventListener('click', cerrarSesion);
 
 btnEliminar.addEventListener('click', abrirConfirmacion);
 btnCancelarEliminar.addEventListener('click', cerrarConfirmacion);

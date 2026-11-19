@@ -13,6 +13,7 @@
   <script src="js/auth.js" defer></script>
   <script src="js/recetas.js" defer></script>
   <script src="js/perfil.js" defer></script>
+  <script src="js/vistas.js" defer></script>
   <script src="js/historial-busquedas.js" defer></script>
   <script src="js/listado.js" defer></script>
 </head>
@@ -36,7 +37,10 @@
         <p id="portada-nombre" class="portada-nombre"></p>
         <p id="portada-frase" class="portada-frase"></p>
       </div>
-      <a id="portada-editar" href="configuracion.html" class="boton">Editar</a>
+      <div class="acciones-portada">
+        <button id="btn-compartir" type="button">Compartir perfil</button>
+        <a id="portada-editar" href="configuracion.html" class="boton">Editar</a>
+      </div>
     </section>
 
     <div class="encabezado-listado">
