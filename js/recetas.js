@@ -345,6 +345,23 @@ async function traerMisRecetas() {
 }
 
 
+// recetas publicas de un usuario, para su perfil publico (funciona sin sesion)
+async function traerRecetasPublicas(usuarioId) {
+  const { data, error } = await supabaseClient
+    .from('recetas')
+    .select('id, titulo, descripcion, imagen_principal, es_publica, created_at')
+    .eq('usuario_id', usuarioId)
+    .eq('es_publica', true)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    throw error;
+  }
+
+  return data;
+}
+
+
 // el bucket de recetas es privado: pido urls firmadas que duran un rato
 async function obtenerUrlsDeImagenes(rutas) {
   const urlsPorRuta = {};

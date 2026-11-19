@@ -18,6 +18,20 @@ async function traerPerfil(usuarioId) {
 }
 
 
+// para el perfil publico: devuelve null si no existe o si RLS no deja verlo
+// (solo se ven los perfiles con al menos una receta publica)
+async function traerPerfilPublico(usuarioId) {
+  const { data, error } = await supabaseClient
+    .from('perfiles')
+    .select('nombre, nombre_emprendimiento, frase, logo')
+    .eq('id', usuarioId)
+    .maybeSingle();
+
+  if (error) throw error;
+  return data;
+}
+
+
 // el bucket de logos es publico, la url no vence
 function obtenerUrlDelLogo(rutaLogo) {
   if (!rutaLogo) {

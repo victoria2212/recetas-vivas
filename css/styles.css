@@ -585,6 +585,12 @@ button:disabled {
   overflow: hidden;
 }
 
+.acciones-portada {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
 /* cover: llena el circulo sin deformar la imagen */
 .portada-logo img {
   width: 100%;
