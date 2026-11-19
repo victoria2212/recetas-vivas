@@ -1,10 +1,7 @@
-// =====================================================================
-// 
-//
-// Este archivo SOLO habla con Supabase (base de datos y Storage).
+
+// Este archivo SOLO habla con Supabase 
 // No toca el HTML: no lee formularios ni muestra mensajes. Así la misma
-// lógica se puede reutilizar desde otras páginas (por ejemplo, cuando
-// hagamos "editar receta").
+// lógica se puede reutilizar desde otras páginas (por ejemplo "editar receta").
 //
 // Requiere que antes estén cargados:
 //   - config.js → crea supabaseClient
@@ -31,19 +28,15 @@ const EXTENSIONES_PERMITIDAS = {
 };
 
 
-// ---------------------------------------------------------------------
-// validarImagen(archivo, etiqueta)
-//
-// Qué hace: revisa que una imagen tenga un tipo permitido y no supere
-//           los 5 MB. Si algo está mal, lanza un error con un mensaje
-//           claro para el usuario.
-// Recibe:   archivo  → el objeto File que eligió el usuario.
+//  revisa que una imagen tenga un tipo permitido y no supere
+//           los 5 MB. Si algo está mal, lanza un error con un mensaje para el usuario.
+// Recibe    archivo  → el objeto File que eligió el usuario.
 //           etiqueta → texto para el mensaje (ej. "Paso 2").
 // Devuelve: nada. Si la imagen es válida, simplemente termina.
 //
 // Por qué existe: el bucket también controla tipo y tamaño, pero recién
 // al subir. Validar ANTES evita crear una receta que después falle.
-// ---------------------------------------------------------------------
+
 function validarImagen(archivo, etiqueta) {
   // Si el tipo no está en el objeto de permitidos, el resultado es
   // undefined, y !undefined es true → error.
@@ -58,18 +51,16 @@ function validarImagen(archivo, etiqueta) {
 }
 
 
-// ---------------------------------------------------------------------
-// subirImagen(ruta, archivo)
-//
-// Qué hace: sube un archivo a Storage, en la ruta indicada.
+// sube un archivo a Storage, en la ruta indicada.
 // Recibe:   ruta    → dónde guardarlo dentro del bucket,
 //                     ej. "id-usuario/id-receta/principal-123.jpg".
 //           archivo → el objeto File a subir.
 // Devuelve: nada. Si falla, lanza el error que devuelve Supabase.
 //
 // async: la función hace algo que tarda (enviar el archivo por
-// internet), así que devuelve una promesa y se usa con await.
-// ---------------------------------------------------------------------
+// internet), así que devuelve una promesa y se usa con await. Quien la llama usa await para
+// esperar ese aviso antes de seguir.
+
 async function subirImagen(ruta, archivo) {
   const { error } = await supabaseClient.storage
     .from(BUCKET_IMAGENES)
@@ -84,28 +75,20 @@ async function subirImagen(ruta, archivo) {
 }
 
 
-// =====================================================================
 // FUNCIONES AUXILIARES DE GUARDADO
-// Las usan guardarReceta() (crear) y actualizarReceta() (editar), así
-// el mismo código no se repite en las dos.
-// =====================================================================
 
 
-// ---------------------------------------------------------------------
-// validarImagenesDeReceta(datos)
-//
-// Qué hace: valida la imagen principal y las imágenes de los pasos,
-//           pero solo las que el usuario eligió (todas son opcionales).
+//  valida la imagen principal y las imágenes de los pasos,
+//           pero solo las que el usuario eligió 
 // Recibe:   datos → { imagenPrincipal: File o null, pasos: [{ imagen }] }
 // Devuelve: nada. Si una imagen es inválida, lanza el error y se corta
 //           ANTES de crear o modificar nada.
-// ---------------------------------------------------------------------
+
 function validarImagenesDeReceta(datos) {
   if (datos.imagenPrincipal) {
     validarImagen(datos.imagenPrincipal, 'Imagen principal');
   }
 
-  // forEach recorre los pasos; i es la posición (empieza en 0).
   datos.pasos.forEach((paso, i) => {
     if (paso.imagen) {
       validarImagen(paso.imagen, `Paso ${i + 1}`);
@@ -114,13 +97,10 @@ function validarImagenesDeReceta(datos) {
 }
 
 
-// ---------------------------------------------------------------------
-// obtenerUsuarioId()
-//
-// Qué hace: devuelve el id del usuario logueado. Hace falta para
+// devuelve el id del usuario logueado. Hace falta para
 //           armar la carpeta de las imágenes: {usuario_id}/{receta_id}/.
 // Devuelve: el id (texto). Si la sesión expiró, lanza un error.
-// ---------------------------------------------------------------------
+
 async function obtenerUsuarioId() {
   const sesion = await obtenerSesion();
   if (!sesion) {
@@ -130,10 +110,7 @@ async function obtenerUsuarioId() {
 }
 
 
-// ---------------------------------------------------------------------
-// armarRutaImagen(carpeta, nombre, archivo, marca)
-//
-// Qué hace: arma la ruta donde se guarda una imagen en Storage.
+//  arma la ruta donde se guarda una imagen en Storage.
 // Recibe:   carpeta → "{usuario_id}/{receta_id}".
 //           nombre  → "principal" o "pasos/paso-2", por ejemplo.
 //           archivo → el File (para saber su extensión).
@@ -143,22 +120,18 @@ async function obtenerUsuarioId() {
 // Se usa una marca de tiempo en lugar del nombre original del archivo,
 // que puede tener espacios o tildes que complican las rutas. Además,
 // al editar, la imagen nueva nunca pisa a la vieja: tienen otra marca.
-// ---------------------------------------------------------------------
+
 function armarRutaImagen(carpeta, nombre, archivo, marca) {
   const extension = EXTENSIONES_PERMITIDAS[archivo.type];
   return `${carpeta}/${nombre}-${marca}.${extension}`;
 }
 
 
-// ---------------------------------------------------------------------
-// armarFilasIngredientes(recetaId, ingredientes)
-//
-// Qué hace: transforma los ingredientes del formulario en filas de la
-//           tabla ingredientes.
+// transforma los ingredientes del formulario en filas de la tabla ingredientes.
 // Recibe:   recetaId     → id de la receta a la que pertenecen.
 //           ingredientes → [{ nombre, cantidad, unidad, nota }]
 // Devuelve: el array de filas, listo para insertar con UNA sola llamada.
-// ---------------------------------------------------------------------
+
 function armarFilasIngredientes(recetaId, ingredientes) {
   return ingredientes.map((ing, i) => ({
     receta_id: recetaId,
@@ -171,9 +144,6 @@ function armarFilasIngredientes(recetaId, ingredientes) {
 }
 
 
-// ---------------------------------------------------------------------
-// subirImagenesYArmarFilasPasos(carpeta, recetaId, pasos, marca, rutasSubidas)
-//
 // Qué hace: recorre los pasos, sube las imágenes NUEVAS y arma las
 //           filas de la tabla pasos.
 // Recibe:   carpeta      → "{usuario_id}/{receta_id}".
@@ -193,7 +163,7 @@ function armarFilasIngredientes(recetaId, ingredientes) {
 //   - Si no, y no tocó nada      → la que ya tenía (o null si no tenía).
 // Al crear una receta, imagenActual y quitarImagen no existen
 // (undefined), así que se cumple el último caso con null.
-// ---------------------------------------------------------------------
+
 async function subirImagenesYArmarFilasPasos(carpeta, recetaId, pasos, marca, rutasSubidas) {
   const filasPasos = [];
 
@@ -221,10 +191,7 @@ async function subirImagenesYArmarFilasPasos(carpeta, recetaId, pasos, marca, ru
 }
 
 
-// ---------------------------------------------------------------------
-// guardarReceta(datos)
-//
-// Qué hace: guarda una receta NUEVA y COMPLETA en Supabase: la receta,
+//  guarda una receta NUEVA y COMPLETA en Supabase: la receta,
 //           su imagen principal, sus ingredientes y sus pasos (con sus
 //           imágenes opcionales).
 //
@@ -249,24 +216,22 @@ async function subirImagenesYArmarFilasPasos(carpeta, recetaId, pasos, marca, ru
 // (el "todo o nada" de SQL). Si algo falla a mitad de camino, el bloque
 // catch llama a deshacerReceta() para borrar lo que se alcanzó a crear
 // y no dejar recetas incompletas.
-// ---------------------------------------------------------------------
+
 async function guardarReceta(datos) {
 
-  // ---- Validaciones previas ----
   // Si alguna imagen es inválida, el error corta acá y no se crea nada.
   validarImagenesDeReceta(datos);
 
   const usuarioId = await obtenerUsuarioId();
 
   // Variables para recordar qué se creó, por si hay que deshacerlo.
-  // Se declaran con let porque cambian durante el proceso.
   let recetaId = null;
   const rutasSubidas = []; // const: el array no se reemplaza, solo se le agregan elementos
 
   try {
     // ================= 1. CREAR LA RECETA =================
-    // No se envía usuario_id: la base lo completa sola con auth.uid()
-    // (el usuario logueado). Así nadie puede crear recetas a nombre de otro.
+    // No se envía usuario_id: la base lo completa sola con auth.uid() (el usuario logueado). 
+    // Así nadie puede crear recetas a nombre de otro.
     // .select('id').single() le pide a la base que devuelva el id generado.
     const { data: receta, error: errorReceta } = await supabaseClient
       .from('recetas')
@@ -287,7 +252,6 @@ async function guardarReceta(datos) {
     const marca = Date.now(); // milisegundos desde 1970: número único
 
     // -- Imagen principal (opcional) --
-    // let porque cambia: queda en null si el usuario no eligió imagen.
     let rutaPrincipal = null;
     if (datos.imagenPrincipal) {
       rutaPrincipal = armarRutaImagen(carpeta, 'principal', datos.imagenPrincipal, marca);
@@ -340,9 +304,6 @@ async function guardarReceta(datos) {
 }
 
 
-// ---------------------------------------------------------------------
-// deshacerReceta(recetaId, rutasSubidas)
-//
 // Qué hace: borra lo que se alcanzó a crear antes de un error, para no
 //           dejar recetas incompletas ni imágenes huérfanas.
 // Recibe:   recetaId     → id de la receta creada (o null si no llegó a crearse).
@@ -369,19 +330,8 @@ async function deshacerReceta(recetaId, rutasSubidas) {
 }
 
 
-
-// =====================================================================
 // EDICIÓN DE UNA RECETA
-// =====================================================================
 
-
-// ---------------------------------------------------------------------
-// actualizarReceta(recetaOriginal, datos)
-//
-// Qué hace: guarda los cambios de una receta que ya existe: datos
-//           generales, imagen principal, ingredientes, pasos y sus
-//           imágenes.
-//
 // Recibe:   recetaOriginal → la receta como estaba antes de editar
 //                            (la de traerRecetaPorId). Se usa para
 //                            saber qué filas e imágenes viejas borrar.
@@ -416,8 +366,8 @@ async function deshacerReceta(recetaId, rutasSubidas) {
 // navegador, así que se avisa que el guardado quedó a medias.
 //
 // (La forma de lograr un "todo o nada" real sería una función SQL en
-// Supabase, que corre dentro de una transacción. Queda como mejora.)
-// ---------------------------------------------------------------------
+// Supabase, que corre dentro de una transacción. Queda como mejora futura.)
+
 async function actualizarReceta(recetaOriginal, datos) {
 
   // ---- Validaciones previas ----
@@ -539,17 +489,14 @@ async function actualizarReceta(recetaOriginal, datos) {
 }
 
 
-// ---------------------------------------------------------------------
-// borrarImagenesSinUso(rutas)
-//
-// Qué hace: borra de Storage las imágenes que la receta ya no usa.
+// borra de Storage las imágenes que la receta ya no usa.
 // Recibe:   rutas → array de rutas (puede estar vacío).
 // Devuelve: nada.
 //
 // Si falla, solo se registra en la consola y NO se lanza el error: los
 // cambios de la receta ya se guardaron bien, y una imagen que quedó sin
 // borrar no afecta lo que ve el usuario (solo ocupa espacio).
-// ---------------------------------------------------------------------
+
 async function borrarImagenesSinUso(rutas) {
   if (rutas.length === 0) {
     return;
@@ -562,10 +509,7 @@ async function borrarImagenesSinUso(rutas) {
 }
 
 
-// ---------------------------------------------------------------------
-// deshacerEdicion(idsIngredientes, idsPasos, rutasSubidas)
-//
-// Qué hace: si la edición falla antes de tocar los datos viejos, borra
+// si la edición falla antes de tocar los datos viejos, borra
 //           lo nuevo que se alcanzó a crear, así la receta queda
 //           exactamente como estaba.
 // Recibe:   idsIngredientes → ids de los ingredientes nuevos insertados.
@@ -573,7 +517,7 @@ async function borrarImagenesSinUso(rutas) {
 //           rutasSubidas    → rutas de las imágenes nuevas subidas.
 // Devuelve: nada. Si la limpieza falla, solo se registra en la consola:
 //           el error que importa mostrar es el original.
-// ---------------------------------------------------------------------
+
 async function deshacerEdicion(idsIngredientes, idsPasos, rutasSubidas) {
   try {
     if (idsIngredientes.length > 0) {
@@ -592,15 +536,11 @@ async function deshacerEdicion(idsIngredientes, idsPasos, rutasSubidas) {
 
 
 
-// =====================================================================
+
 // LECTURA DE RECETAS (listado)
-// =====================================================================
 
 
-// ---------------------------------------------------------------------
-// traerMisRecetas()
-//
-// Qué hace: trae las recetas del usuario logueado, de la más nueva a
+// trae las recetas del usuario logueado, de la más nueva a
 //           la más vieja, llamando DIRECTAMENTE a la API REST de
 //           Supabase con fetch (sin pasar por la librería).
 // Recibe:   nada.
@@ -616,7 +556,7 @@ async function deshacerEdicion(idsIngredientes, idsPasos, rutasSubidas) {
 //   ?select=id,titulo,...            → qué columnas traer (como SELECT)
 //   &usuario_id=eq.{id}              → filtro: usuario_id = id (como WHERE)
 //   &order=created_at.desc           → orden: más nuevas primero (ORDER BY)
-// ---------------------------------------------------------------------
+
 async function traerMisRecetas() {
   const sesion = await obtenerSesion();
   if (!sesion) {
@@ -656,10 +596,7 @@ async function traerMisRecetas() {
 }
 
 
-// ---------------------------------------------------------------------
-// obtenerUrlsDeImagenes(rutas)
-//
-// Qué hace: pide a Storage una URL firmada (signed URL) para cada ruta.
+// pide a Storage una URL firmada (signed URL) para cada ruta.
 // Recibe:   rutas → array de rutas guardadas en la base,
 //                   ej. ["id-usuario/id-receta/principal-123.jpg", ...].
 // Devuelve: un objeto que relaciona cada ruta con su URL:
@@ -669,7 +606,7 @@ async function traerMisRecetas() {
 // tienen una dirección pública fija. Supabase entrega una dirección
 // temporal (aquí, válida por 1 hora) solo si las políticas lo permiten.
 // createSignedUrls (en plural) pide todas en UNA sola llamada.
-// ---------------------------------------------------------------------
+
 async function obtenerUrlsDeImagenes(rutas) {
   const urlsPorRuta = {};
 
@@ -701,16 +638,10 @@ async function obtenerUrlsDeImagenes(rutas) {
 }
 
 
-// =====================================================================
 // ELIMINACIÓN DE UNA RECETA
-// =====================================================================
 
+// borra una receta completa
 
-// ---------------------------------------------------------------------
-// eliminarReceta(receta)
-//
-// Qué hace: borra una receta completa: sus imágenes de Storage y la
-//           receta (que arrastra sus ingredientes y pasos).
 // Recibe:   receta → el objeto que devuelve traerRecetaPorId(), con
 //                    id, imagen_principal y pasos (para saber qué
 //                    imágenes borrar).
@@ -768,15 +699,12 @@ async function eliminarReceta(receta) {
 
 
 
-// =====================================================================
+
 // LECTURA DE UNA RECETA (detalle)
-// =====================================================================
 
 
-// ---------------------------------------------------------------------
-// traerRecetaPorId(id)
-//
-// Qué hace: trae UNA receta completa: sus datos, sus ingredientes y sus
+
+//  trae UNA receta completa: sus datos, sus ingredientes y sus
 //           pasos, en UNA sola llamada a la base.
 // Recibe:   id → el id (uuid) de la receta, el que viene en la dirección
 //                receta.html?id=...
@@ -790,9 +718,7 @@ async function eliminarReceta(receta) {
 //           o null si la receta no existe o el usuario no tiene permiso
 //           para verla (las políticas RLS la "esconden").
 //
-// Cómo trae todo junto: dentro del select se escriben las tablas
-// relacionadas entre paréntesis: ingredientes(...) y pasos(...).
-// Supabase detecta la relación por las claves foráneas (receta_id) y
+
 // devuelve los ingredientes y pasos ANIDADOS dentro de la receta.
 // Es el equivalente a un JOIN, pero con la respuesta ya agrupada.
 //
@@ -802,7 +728,7 @@ async function eliminarReceta(receta) {
 // maybeSingle() (en lugar de single()): si no encuentra ninguna fila
 // devuelve null en vez de un error. Así se distingue "no existe / no
 // tiene permiso" (null) de "falló la conexión" (error).
-// ---------------------------------------------------------------------
+
 async function traerRecetaPorId(id) {
   const { data, error } = await supabaseClient
     .from('recetas')
