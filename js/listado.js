@@ -47,6 +47,7 @@ function mostrarError(texto) {
 // mostrar el aviso verde según de dónde se viene:
 //           ?guardada=1  → viene de guardar una receta.
 //           ?eliminada=1 → viene de eliminar una receta.
+//           ?perfil=1    → viene de guardar los datos del emprendimiento.
 
 // URLSearchParams lee los parámetros que van después del "?" en la
 // dirección. history.replaceState limpia la dirección para que el
@@ -60,7 +61,8 @@ function mostrarAvisoSegunDireccion() {
   // sumar un aviso nuevo alcanza con agregar una línea acá.
   const avisos = {
     guardada: 'Receta guardada correctamente.',
-    eliminada: 'Receta eliminada.'
+    eliminada: 'Receta eliminada.',
+    perfil: 'Datos del emprendimiento guardados.'
   };
 
 
@@ -76,25 +78,58 @@ function mostrarAvisoSegunDireccion() {
 
 
 
-// Recibe la sesion → la sesión actual (para saber el id del usuario).
-// Si falla, muestra el mail en su lugar y avisa el error, pero la
-// página sigue funcionando.
-
-async function saludarUsuario(sesion) {
-  const { data: perfil, error } = await supabaseClient
-    .from('perfiles')
-    .select('nombre')
-    .eq('id', sesion.user.id)
-    .single();
-
-  if (error) {
+// Trae el perfil del usuario y con él arma el saludo y la portada.
+// Si falla, saluda con el mail y avisa el error, pero la página sigue
+// funcionando (la portada queda oculta).
+async function mostrarPerfil(sesion) {
+  try {
+    const perfil = await traerPerfil(sesion.user.id);
+    saludo.textContent = 'Hola, ' + perfil.nombre;
+    dibujarPortada(perfil);
+  } catch (error) {
     console.error(error);
     mostrarError('No se pudo leer el perfil: ' + error.message);
     saludo.textContent = sesion.user.email;
+  }
+}
+
+
+// Completa la portada con el logo, el nombre y la frase.
+// Si todavía no cargó el nombre del emprendimiento, la portada invita
+// a hacerlo y el botón dice "Configurar" en lugar de "Editar".
+function dibujarPortada(perfil) {
+  const configurado = Boolean(perfil.nombre_emprendimiento);
+
+  document.getElementById('portada-nombre').textContent = configurado
+    ? perfil.nombre_emprendimiento
+    : 'Agregue el logo y el nombre de su emprendimiento';
+  document.getElementById('portada-frase').textContent = configurado
+    ? (perfil.frase ?? '')
+    : 'Van a aparecer acá, arriba de sus recetas.';
+  document.getElementById('portada-editar').textContent = configurado ? 'Editar' : 'Configurar';
+
+  dibujarLogo(perfil);
+  document.getElementById('portada').hidden = false;
+}
+
+
+// Pone el logo en la portada. Sin logo, muestra la inicial del
+// emprendimiento en un recuadro (o un recuadro vacío si no hay nombre).
+function dibujarLogo(perfil) {
+  const contenedor = document.getElementById('portada-logo');
+  contenedor.replaceChildren();
+
+  const url = obtenerUrlDelLogo(perfil.logo);
+  if (url) {
+    const imagen = document.createElement('img');
+    imagen.src = url;
+    imagen.alt = 'Logo de ' + (perfil.nombre_emprendimiento ?? 'su emprendimiento');
+    contenedor.appendChild(imagen);
     return;
   }
 
-  saludo.textContent = 'Hola, ' + perfil.nombre;
+  // charAt(0) toma la primera letra; ?? '' evita un error si no hay nombre.
+  contenedor.textContent = (perfil.nombre_emprendimiento ?? '').charAt(0).toUpperCase();
 }
 
 
@@ -401,7 +436,7 @@ async function cargarRecetas() {
 
 //  1) verifica la sesión (sin sesión, vuelve al inicio);
 //  2) recupera la última búsqueda y el orden elegido;
-//  3) saluda y muestra el aviso ("receta guardada" o "eliminada");
+//  3) muestra el aviso verde, el saludo y la portada del emprendimiento;
 //  4) carga el listado.
 //
 // La búsqueda y el orden se recuperan ANTES de cargar, para que el
@@ -415,9 +450,9 @@ async function iniciarPagina() {
   selectOrden.value = leerOrdenGuardado();
   mostrarAvisoSegunDireccion();
 
-  // Saludo y listado son independientes: se ejecutan a la vez.
+  // Perfil y listado son independientes: se ejecutan a la vez.
   // Promise.all espera a que terminen ambos.
-  await Promise.all([saludarUsuario(sesion), cargarRecetas()]);
+  await Promise.all([mostrarPerfil(sesion), cargarRecetas()]);
 }
 
 

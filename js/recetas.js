@@ -55,15 +55,18 @@ function validarImagen(archivo, etiqueta) {
 // Recibe:   ruta    → dónde guardarlo dentro del bucket,
 //                     ej. "id-usuario/id-receta/principal-123.jpg".
 //           archivo → el objeto File a subir.
+//           bucket  → en qué bucket guardarlo. Si no se indica, usa el
+//                     de las recetas (= BUCKET_IMAGENES es el valor por
+//                     defecto). El logo lo sube a "logos" (ver perfil.js).
 // Devuelve: nada. Si falla, lanza el error que devuelve Supabase.
 //
 // async: la función hace algo que tarda (enviar el archivo por
 // internet), así que devuelve una promesa y se usa con await. Quien la llama usa await para
 // esperar ese aviso antes de seguir.
 
-async function subirImagen(ruta, archivo) {
+async function subirImagen(ruta, archivo, bucket = BUCKET_IMAGENES) {
   const { error } = await supabaseClient.storage
-    .from(BUCKET_IMAGENES)
+    .from(bucket)
     .upload(ruta, archivo, {
       contentType: archivo.type, // le dice a Storage qué tipo de archivo es
       upsert: false              // si ya existe uno igual, da error en vez de pisarlo
