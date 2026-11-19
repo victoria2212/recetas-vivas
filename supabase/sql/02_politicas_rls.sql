@@ -1,6 +1,6 @@
 -- =====================================================================
--- RECETAS VIVAS · Políticas RLS · Sprint 1
--- RLS = Row Level Security (seguridad a nivel de fila)
+-- RECETAS VIVAS · Políticas RLS 
+-- Row Level Security (seguridad a nivel de fila)
 -- Ejecutar en: Supabase → SQL Editor → New query → Run
 --
 -- Conceptos:

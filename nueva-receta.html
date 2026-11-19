@@ -6,18 +6,7 @@
   <title>Recetas Vivas · Nueva receta</title>
   <link rel="stylesheet" href="css/styles.css">
 
-  <!-- ===== JavaScript =====
-       defer: el navegador descarga estos archivos SIN frenar la lectura
-       del HTML y los ejecuta recién cuando el HTML está completo, así
-       los getElementById encuentran sus elementos.
-       Los scripts con defer se ejecutan en el MISMO ORDEN en que están
-       escritos, y el orden importa:
-         1. Librería de Supabase → crea la variable global "supabase"
-         2. config.js            → la usa para crear supabaseClient
-         3. auth.js              → funciones de sesión (usa supabaseClient)
-         4. recetas.js           → lectura y guardado de recetas
-         5. nueva-receta.js      → lógica de esta página (crear y editar)
-  -->
+
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
   <script src="js/config.js" defer></script>
   <script src="js/auth.js" defer></script>
@@ -31,10 +20,7 @@
   </header>
 
   <main>
-    <!-- Esta página sirve para CREAR y para EDITAR:
-         - nueva-receta.html          → receta nueva (formulario vacío)
-         - nueva-receta.html?id=...   → editar esa receta (formulario cargado)
-         JavaScript cambia el título y los textos según el modo. -->
+
     <h1 id="titulo-pagina">Nueva receta</h1>
 
     <!-- Solo en modo edición: mientras se trae la receta -->
@@ -159,4 +145,4 @@
   </datalist>
 
 </body>
-</html>
+</html>

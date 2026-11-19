@@ -1,14 +1,14 @@
-// =====================================================================
+
 // auth.js · Funciones de autenticación
 // Requiere que config.js esté cargado antes (usa supabaseClient).
-// =====================================================================
+
 
 // Inicia el login con Google.
 // Redirige a la pantalla de Google; al terminar, Supabase devuelve al
 // usuario a app.html (dirección que debe estar en Redirect URLs).
 async function iniciarSesionConGoogle() {
   // new URL('app.html', ...) arma la dirección completa de app.html
-  // relativa a la página actual, sin importar el puerto o la carpeta.
+  // relativa a la página actual
   const destino = new URL('app.html', window.location.href).href;
 
   const { error } = await supabaseClient.auth.signInWithOAuth({

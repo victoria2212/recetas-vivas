@@ -6,18 +6,6 @@
   <title>Recetas Vivas · Iniciar sesión</title>
   <link rel="stylesheet" href="css/styles.css">
 
-  <!-- ===== JavaScript =====
-       defer: el navegador descarga estos archivos SIN frenar la lectura
-       del HTML y los ejecuta recién cuando el HTML está completo, así
-       los getElementById encuentran sus elementos.
-       Los scripts con defer se ejecutan en el MISMO ORDEN en que están
-       escritos, y el orden importa:
-         1. Librería de Supabase → crea la variable global "supabase"
-         2. config.js            → la usa para crear supabaseClient
-         3. auth.js              → funciones de sesión (usa supabaseClient)
-         4. inicio.js            → lógica de esta página
-       Esta página no carga recetas.js porque no lee ni guarda recetas.
-  -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
   <script src="js/config.js" defer></script>
   <script src="js/auth.js" defer></script>
@@ -30,7 +18,6 @@
 
     <button id="btn-google" type="button">Iniciar sesión con Google</button>
 
-    <!-- Aquí se muestran los errores, si los hay -->
     <p id="mensaje-error" class="error" hidden></p>
   </main>
 </body>

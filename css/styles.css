@@ -1,8 +1,4 @@
-/* =====================================================================
-   styles.css · Estilos base provisorios (Sprint 1)
-   Solo para que las páginas sean usables. Se reemplazan con el diseño
-   definitivo de las interfaces.
-   ===================================================================== */
+
 
 /* box-sizing: border-box hace que el ancho incluya el borde y el
    relleno, así los elementos no "se pasan" del tamaño indicado. */
@@ -10,9 +6,7 @@
   box-sizing: border-box;
 }
 
-/* El atributo hidden oculta un elemento, pero si una clase le da
-   display: flex o grid, la clase gana y el elemento se sigue viendo.
-   Esta regla asegura que hidden SIEMPRE oculte. */
+/* ocultar elemento */
 [hidden] {
   display: none !important;
 }
@@ -83,7 +77,7 @@ textarea {
   border-radius: 6px;
 }
 
-/* Fila de ingrediente en grilla: cantidad | unidad | nombre | nota | ✕ */
+/* Fila de ingrediente: cantidad | unidad | nombre | nota | ✕ */
 .fila-ingrediente {
   display: grid;
   grid-template-columns: 80px 100px 1fr 1fr auto;
@@ -150,11 +144,11 @@ button:disabled {
   color: #1b6e2e;
 }
 
-/* =====================================================================
+/* 
    LISTADO DE RECETAS (app.html)
-   ===================================================================== */
+    */
 
-/* Título y botón "+ Nueva receta" en la misma línea */
+/* Título y botón  */
 .encabezado-listado {
   display: flex;
   justify-content: space-between;
@@ -165,7 +159,7 @@ button:disabled {
 
 /* Contenedor del buscador: el margen va acá (y no en el input) para
    que la lista del historial quede pegada justo debajo del campo.
-   position: relative → la lista (absolute) se ubica respecto de él. */
+    */
 .contenedor-buscador {
   position: relative;
   margin: 1rem 0;
@@ -181,8 +175,7 @@ button:disabled {
   border-radius: 6px;
 }
 
-/* Oculta un elemento a la vista pero lo deja para los lectores de
-   pantalla (accesibilidad). Se usa en la etiqueta del buscador. */
+/* Oculta un elemento a la vista. Se usa en la etiqueta del buscador. */
 .oculto-visual {
   position: absolute;
   width: 1px;
@@ -252,8 +245,7 @@ button:disabled {
   margin: 0.4rem 0 0.25rem;
 }
 
-/* Descripción: corta a 2 líneas con "..." para que las tarjetas
-   tengan alturas parecidas */
+/* Descripción */
 .cuerpo-tarjeta p {
   margin: 0;
   color: #555;
@@ -283,12 +275,12 @@ button:disabled {
   color: #555;
 }
 
-/* =====================================================================
+/* 
    DETALLE DE RECETA (receta.html)
-   ===================================================================== */
+    */
 
 /* Encabezado en dos columnas: imagen principal | título y descripción.
-   En el celular se apilan (ver media query más abajo). */
+   En el celular se apilan  */
 .encabezado-receta {
   display: grid;
   grid-template-columns: 280px 1fr;
@@ -389,14 +381,12 @@ button:disabled {
 }
 
 
-/* =====================================================================
+/*
    HISTORIAL DE BÚSQUEDAS (app.html)
-   ===================================================================== */
+   */
 
 /* Lista desplegable debajo del buscador.
-   position: absolute la saca del flujo: se dibuja ENCIMA del listado
-   en lugar de empujarlo hacia abajo. top: 100% = justo debajo del campo.
-   z-index alto: queda por encima de las tarjetas. */
+   */
 .historial-busquedas {
   position: absolute;
   top: 100%;
@@ -442,9 +432,9 @@ button:disabled {
 }
 
 
-/* =====================================================================
+/* 
    ELIMINAR RECETA (receta.html)
-   ===================================================================== */
+  */
 
 /* Fila de botones: Eliminar / Sí, eliminar + Cancelar */
 .acciones-receta {
@@ -466,7 +456,7 @@ button:disabled {
   color: #fff;
 }
 
-/* Recuadro de confirmación: fondo rosado suave para llamar la atención */
+/* Recuadro de confirmación */
 .confirmacion {
   margin-top: 1rem;
   padding: 1rem;
@@ -480,11 +470,11 @@ button:disabled {
 }
 
 
-/* =====================================================================
+/*
    EDITAR RECETA (nueva-receta.html en modo edición)
-   ===================================================================== */
+*/
 
-/* Imagen actual (principal o de un paso) con la opción de quitarla */
+/* Imagen actual */
 .imagen-actual {
   margin-top: 0.75rem;
 }

@@ -1,5 +1,5 @@
 -- =====================================================================
--- RECETAS VIVAS · Esquema de base de datos · Sprint 1
+-- RECETAS VIVAS · Esquema de base de datos 
 -- Ejecutar en: Supabase → SQL Editor → New query → Run
 -- Tablas: perfiles, recetas, ingredientes, pasos
 -- =====================================================================

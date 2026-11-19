@@ -1,9 +1,9 @@
-// =====================================================================
+
 // config.js · Conexión con Supabase
 // Se carga en TODAS las páginas, después de la librería de Supabase.
-// =====================================================================
 
-// Dirección de su backend (Project URL).
+
+// Dirección de backend (Project URL).
 const SUPABASE_URL = 'https://oboqtbtqtyytckrryktq.supabase.co';
 
 // Clave pública (publishable key). Es seguro que esté en el frontend:

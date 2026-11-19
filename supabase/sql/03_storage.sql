@@ -1,5 +1,5 @@
 -- =====================================================================
--- RECETAS VIVAS · Storage (imágenes) · Sprint 1
+-- RECETAS VIVAS · Storage (imágenes) 
 -- Ejecutar en: Supabase → SQL Editor → New query → Run
 --
 -- Estructura de rutas dentro del bucket (OBLIGATORIA, las políticas

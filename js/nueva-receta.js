@@ -1,31 +1,15 @@
-// =====================================================================
-// js/nueva-receta.js · Página "Nueva receta" / "Editar receta"
-//                       (nueva-receta.html)
-//
+
+
 // La misma página sirve para crear y para editar, así el formulario y
 // sus validaciones están escritos una sola vez:
 //   - nueva-receta.html         → modo CREAR (formulario vacío).
 //   - nueva-receta.html?id=...  → modo EDITAR (formulario cargado con
 //                                 los datos de esa receta).
-//
-// Antes este código estaba escrito dentro del HTML. Se pasó a un
-// archivo aparte para poder cargarlo con defer y para que el HTML
-// quede solo con la estructura de la página.
-//
-// Se carga con defer, en este orden: librería de Supabase → config.js
-// → auth.js → recetas.js → este archivo. Por eso puede usar
-// supabaseClient, protegerPagina(), las funciones de recetas.js y
-// buscar elementos del HTML sin esperar a que la página termine de cargar.
-// =====================================================================
 
-// ===================================================================
 // Lógica de la PÁGINA: leer el formulario, validar, mostrar mensajes
 // y agregar o quitar filas. Lo que habla con Supabase está en
 // recetas.js (funciones guardarReceta y actualizarReceta).
-// ===================================================================
 
-// Referencias a los elementos que se usan varias veces.
-// Se buscan una sola vez y se guardan en constantes.
 const form = document.getElementById('form-receta');
 const listaIngredientes = document.getElementById('lista-ingredientes');
 const listaPasos = document.getElementById('lista-pasos');
@@ -34,7 +18,6 @@ const btnGuardar = document.getElementById('btn-guardar');
 const inputPrincipal = document.getElementById('imagen-principal');
 const vistaPrincipal = document.getElementById('vista-principal');
 
-// Elementos del modo edición
 const tituloPagina = document.getElementById('titulo-pagina');
 const estadoCarga = document.getElementById('estado-carga');
 const errorCarga = document.getElementById('error-carga');
@@ -48,37 +31,22 @@ const checkQuitarPrincipal = document.getElementById('quitar-imagen-principal');
 // get devuelve null si no hay id → modo crear.
 const recetaIdEditar = new URLSearchParams(window.location.search).get('id');
 
-// ESTADO de la página (let: se completan después).
+// ESTADO de la página 
 let recetaOriginal = null;                // la receta tal como estaba (solo al editar)
 let textoBotonGuardar = 'Guardar receta'; // cambia a "Guardar cambios" al editar
 
 
-// -----------------------------------------------------------------
-// mostrarError(texto)
-// Qué hace: escribe el mensaje en el párrafo de error y lo muestra.
-// Recibe:   texto → el mensaje para el usuario.
-// textContent (y no innerHTML) evita que un texto con etiquetas
-// HTML se interprete como código.
-// -----------------------------------------------------------------
 function mostrarError(texto) {
   mensajeError.textContent = texto;
   mensajeError.hidden = false;
 }
 
-
-// -----------------------------------------------------------------
-// ocultarError()
-// Qué hace: esconde el mensaje de error (se llama antes de cada
-//           intento de guardar, para no mostrar errores viejos).
-// -----------------------------------------------------------------
 function ocultarError() {
   mensajeError.hidden = true;
 }
 
 
-// -----------------------------------------------------------------
-// agregarFila(idPlantilla, lista)
-// Qué hace: copia una plantilla, le conecta el botón ✕ y agrega la
+//  copia una plantilla, le conecta el botón ✕ y agrega la
 //           fila nueva al final de la lista.
 // Recibe:   idPlantilla → id del <template> a copiar.
 //           lista       → elemento donde se agrega la fila.
@@ -88,7 +56,7 @@ function ocultarError() {
 // cloneNode(true) lo copia con todo su contenido.
 // El ✕ no deja quitar la última fila: la receta necesita al menos
 // un ingrediente y un paso.
-// -----------------------------------------------------------------
+
 function agregarFila(idPlantilla, lista) {
   const plantilla = document.getElementById(idPlantilla);
   const fila = plantilla.content.firstElementChild.cloneNode(true);
@@ -104,14 +72,12 @@ function agregarFila(idPlantilla, lista) {
 }
 
 
-// -----------------------------------------------------------------
-// mostrarVistaPrevia()
-// Qué hace: muestra la imagen principal elegida antes de subirla.
-//
+//  muestra la imagen principal elegida antes de subirla.
+
 // URL.createObjectURL crea una dirección temporal que apunta al
 // archivo en la computadora del usuario. revokeObjectURL libera la
 // anterior para no ocupar memoria si cambia de imagen.
-// -----------------------------------------------------------------
+
 function mostrarVistaPrevia() {
   const archivo = inputPrincipal.files[0];
 
@@ -128,9 +94,7 @@ function mostrarVistaPrevia() {
 }
 
 
-// -----------------------------------------------------------------
-// leerFormulario()
-// Qué hace: junta todos los campos en un objeto con la forma que
+// junta todos los campos en un objeto con la forma que
 //           espera guardarReceta() de recetas.js.
 // Devuelve: { titulo, descripcion, esPublica, imagenPrincipal,
 //             ingredientes: [...], pasos: [...] }
@@ -138,7 +102,7 @@ function mostrarVistaPrevia() {
 // [...lista.children] convierte las filas en un array para poder
 // usar map (transformar) y filter (descartar).
 // Las filas que el usuario dejó totalmente vacías se descartan.
-// -----------------------------------------------------------------
+
 function leerFormulario() {
   const ingredientes = [...listaIngredientes.children]
     .map((fila) => {
@@ -181,20 +145,11 @@ function leerFormulario() {
 }
 
 
-// -----------------------------------------------------------------
-// validar(datos)
-// Qué hace: revisa las reglas de la receta, en orden.
-// Recibe:   datos → el objeto que devuelve leerFormulario().
-// Devuelve: el texto del PRIMER problema encontrado, o null si
-//           todo está bien.
-// (Las reglas de tipo y tamaño de imágenes están en recetas.js.)
-// -----------------------------------------------------------------
 function validar(datos) {
   if (!datos.titulo) {
     return 'Falta el título.';
   }
-  // La imagen principal ya no se valida acá: es opcional. Si se eligió
-  // una, guardarReceta() revisa su tipo y tamaño con validarImagen().
+  
   if (datos.ingredientes.length === 0) {
     return 'Agregue al menos un ingrediente.';
   }
@@ -215,17 +170,8 @@ function validar(datos) {
 }
 
 
-// =================================================================
 // MODO EDICIÓN: cargar la receta en el formulario
-// =================================================================
 
-
-// -----------------------------------------------------------------
-// mostrarErrorDeCarga(texto)
-// Qué hace: si no se puede editar la receta, oculta el formulario y
-//           muestra el motivo con un botón para volver al listado.
-// Recibe:   texto → el mensaje para el usuario.
-// -----------------------------------------------------------------
 function mostrarErrorDeCarga(texto) {
   form.hidden = true;
   estadoCarga.hidden = true;
@@ -234,12 +180,8 @@ function mostrarErrorDeCarga(texto) {
 }
 
 
-// -----------------------------------------------------------------
-// prepararModoEdicion(receta)
-// Qué hace: cambia los textos de la página de "Nueva receta" a
-//           "Editar receta" y hace que "Cancelar" vuelva al detalle.
-// Recibe:   receta → la receta que se va a editar.
-// -----------------------------------------------------------------
+// recibe la receta → la receta que se va a editar.
+
 function prepararModoEdicion(receta) {
   tituloPagina.textContent = 'Editar receta';
   document.title = `Recetas Vivas · Editar ${receta.titulo}`;
@@ -251,16 +193,14 @@ function prepararModoEdicion(receta) {
 }
 
 
-// -----------------------------------------------------------------
-// completarFilaIngrediente(fila, ingrediente)
-// Qué hace: escribe los datos de un ingrediente en una fila del
-//           formulario.
+
+//escribe los datos de un ingrediente en una fila del formulario.
 // Recibe:   fila        → la fila creada con agregarFila().
 //           ingrediente → { cantidad, unidad, nombre, nota }
 //
 // ?? '' : si el dato es null (por ejemplo, sin unidad), el campo
 // queda vacío en lugar de mostrar la palabra "null".
-// -----------------------------------------------------------------
+
 function completarFilaIngrediente(fila, ingrediente) {
   fila.querySelector('.ing-cantidad').value = ingrediente.cantidad ?? '';
   fila.querySelector('.ing-unidad').value = ingrediente.unidad ?? '';
@@ -269,18 +209,10 @@ function completarFilaIngrediente(fila, ingrediente) {
 }
 
 
-// -----------------------------------------------------------------
-// completarFilaPaso(fila, paso, url)
-// Qué hace: escribe la descripción del paso y, si tenía imagen, la
-//           muestra con la opción "Quitar esta imagen".
-// Recibe:   fila → la fila creada con agregarFila().
-//           paso → { descripcion, imagen } (imagen es la RUTA en Storage).
-//           url  → URL firmada para mostrar la imagen (o undefined).
-//
 // La ruta se guarda en fila.dataset.imagenActual (data-imagen-actual
 // en el HTML). Así, al guardar, leerFormulario() sabe qué imagen tenía
 // el paso, aunque el usuario lo haya movido o borrado otros pasos.
-// -----------------------------------------------------------------
+
 function completarFilaPaso(fila, paso, url) {
   fila.querySelector('.paso-descripcion').value = paso.descripcion;
 
@@ -300,9 +232,7 @@ function completarFilaPaso(fila, paso, url) {
 }
 
 
-// -----------------------------------------------------------------
-// completarFormulario(receta, urlsImagenes)
-// Qué hace: llena todo el formulario con los datos de la receta.
+//  llena todo el formulario con los datos de la receta.
 // Recibe:   receta       → la que devuelve traerRecetaPorId().
 //           urlsImagenes → objeto ruta → URL firmada.
 // -----------------------------------------------------------------
@@ -311,7 +241,7 @@ function completarFormulario(receta, urlsImagenes) {
   document.getElementById('descripcion').value = receta.descripcion ?? '';
   document.getElementById('es-publica').checked = receta.es_publica;
 
-  // -- Imagen principal actual (si tenía) --
+  
   if (receta.imagen_principal) {
     const url = urlsImagenes[receta.imagen_principal];
     if (url) {
@@ -320,7 +250,7 @@ function completarFormulario(receta, urlsImagenes) {
     contenedorImagenActual.hidden = false;
   }
 
-  // -- Una fila por ingrediente y una por paso, ya completas --
+  // Una fila por ingrediente y una por paso, ya completas
   receta.ingredientes.forEach((ingrediente) => {
     completarFilaIngrediente(agregarFila('plantilla-ingrediente', listaIngredientes), ingrediente);
   });
@@ -340,18 +270,16 @@ function completarFormulario(receta, urlsImagenes) {
 }
 
 
-// -----------------------------------------------------------------
-// cargarRecetaParaEditar(usuarioId)
-// Qué hace: trae la receta, verifica que sea del usuario y completa
+// trae la receta, verifica que sea del usuario y completa
 //           el formulario. Mientras tanto, el formulario está oculto
 //           y se ve "Cargando receta...".
 // Recibe:   usuarioId → id del usuario logueado.
-//
+
 // Se verifica el dueño porque las recetas públicas de otros usuarios
 // también se pueden LEER. Si alguien escribiera a mano el id de una
 // receta ajena, ni siquiera vería el formulario (y aunque lo forzara,
 // las políticas RLS no le dejarían guardar).
-// -----------------------------------------------------------------
+
 async function cargarRecetaParaEditar(usuarioId) {
   form.hidden = true;
   estadoCarga.hidden = false;
@@ -393,14 +321,12 @@ async function cargarRecetaParaEditar(usuarioId) {
 }
 
 
-// -----------------------------------------------------------------
-// alEnviarFormulario(evento)
-// Qué hace: se ejecuta al tocar "Guardar receta" / "Guardar cambios".
+//  se ejecuta al tocar "Guardar receta" / "Guardar cambios".
 //           Lee, valida y, si todo está bien:
 //           - al CREAR: guarda la receta y vuelve a app.html;
 //           - al EDITAR: guarda los cambios y vuelve al detalle.
 // Recibe:   evento → información del envío que da el navegador.
-// -----------------------------------------------------------------
+
 async function alEnviarFormulario(evento) {
   // Sin esto, el navegador recargaría la página al enviar el form.
   evento.preventDefault();
@@ -419,7 +345,7 @@ async function alEnviarFormulario(evento) {
 
   try {
     if (recetaOriginal) {
-      // -- Modo EDITAR --
+      //Modo EDITAR 
       await actualizarReceta(recetaOriginal, datos);
       // ?editada=1 le avisa al detalle que muestre "Cambios guardados".
       // replace (y no href): así "Atrás" no vuelve al formulario.
@@ -427,7 +353,7 @@ async function alEnviarFormulario(evento) {
         `receta.html?id=${encodeURIComponent(recetaOriginal.id)}&editada=1`
       );
     } else {
-      // -- Modo CREAR --
+      // Modo CREAR
       await guardarReceta(datos);
       // ?guardada=1 le avisa a app.html que muestre "Receta guardada".
       window.location.href = 'app.html?guardada=1';
@@ -441,14 +367,11 @@ async function alEnviarFormulario(evento) {
 }
 
 
-// -----------------------------------------------------------------
-// iniciarPagina()
-// Qué hace: primero verifica la sesión (sin sesión, vuelve al
-//           inicio). Después:
+//  primero verifica la sesión (sin sesión, vuelve al inicio). Después:
 //           - al EDITAR: carga la receta en el formulario;
 //           - al CREAR: deja una fila de ingrediente y una de paso
 //             listas para completar.
-// -----------------------------------------------------------------
+
 async function iniciarPagina() {
   const sesion = await protegerPagina();
   if (!sesion) return;
@@ -463,9 +386,8 @@ async function iniciarPagina() {
 }
 
 
-// ===================================================================
 // EVENTOS: qué función se ejecuta ante cada acción del usuario.
-// ===================================================================
+
 document.getElementById('btn-agregar-ingrediente')
   .addEventListener('click', () => agregarFila('plantilla-ingrediente', listaIngredientes));
 
