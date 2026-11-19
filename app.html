@@ -12,6 +12,7 @@
   <script src="js/config.js" defer></script>
   <script src="js/auth.js" defer></script>
   <script src="js/recetas.js" defer></script>
+  <script src="js/perfil.js" defer></script>
   <script src="js/historial-busquedas.js" defer></script>
   <script src="js/listado.js" defer></script>
 </head>
@@ -29,6 +30,18 @@
   </header>
 
   <main>
+    <!-- Portada del emprendimiento: logo, nombre y frase.
+         Empieza oculta: JavaScript la completa con los datos del perfil.
+         Si todavía no cargó los datos, muestra una invitación a hacerlo. -->
+    <section id="portada" class="portada" aria-label="Mi emprendimiento" hidden>
+      <div id="portada-logo" class="portada-logo"></div>
+      <div class="portada-texto">
+        <p id="portada-nombre" class="portada-nombre"></p>
+        <p id="portada-frase" class="portada-frase"></p>
+      </div>
+      <a id="portada-editar" href="configuracion.html" class="boton">Editar</a>
+    </section>
+
     <div class="encabezado-listado">
       <h1>Mis recetas</h1>
       <a href="nueva-receta.html" class="boton">+ Nueva receta</a>
