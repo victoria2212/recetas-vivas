@@ -11,11 +11,66 @@
   display: none !important;
 }
 
+/* =====================================================================
+   COLORES (modo claro y modo oscuro)
+   Todos los colores están en variables (--nombre). Cada regla usa
+   var(--nombre) en lugar del color fijo, así el modo oscuro solo
+   cambia los valores de las variables, en un único lugar.
+   El atributo data-tema="oscuro" lo pone tema.js en <html>.
+   color-scheme avisa al navegador el tema, para que los controles
+   propios (barras de desplazamiento, selector de archivos) se adapten.
+   ===================================================================== */
+:root {
+  color-scheme: light;
+  --color-fondo: #ffffff;
+  --color-superficie: #ffffff;        /* botones, campos, menús */
+  --color-superficie-suave: #f2f2f2;  /* "Sin imagen", fila al pasar el mouse */
+  --color-texto: #222222;
+  --color-texto-suave: #555555;
+  --color-texto-tenue: #6b6b6b;
+  --color-borde: #dddddd;
+  --color-borde-campo: #bbbbbb;
+  --color-borde-boton: #444444;
+  --color-enlace: #1f5f99;
+  --color-error: #b00020;
+  --color-exito: #1b6e2e;
+  --color-exito-fondo: #e3f4e6;
+  --color-peligro-fondo: #fdf1f3;
+  --color-peligro-borde: #f0b4bd;
+  --sombra: rgba(0, 0, 0, 0.12);
+}
+
+[data-tema="oscuro"] {
+  color-scheme: dark;
+  --color-fondo: #16181b;
+  --color-superficie: #1f2226;
+  --color-superficie-suave: #2a2e33;
+  --color-texto: #e8e8e6;
+  --color-texto-suave: #b8b8b4;
+  --color-texto-tenue: #9d9d98;
+  --color-borde: #34383e;
+  --color-borde-campo: #5a5f67;
+  --color-borde-boton: #a0a09b;
+  --color-enlace: #8cc4ff;
+  --color-error: #ff8a9a;
+  --color-exito: #7fd69a;
+  --color-exito-fondo: #1d3a26;
+  --color-peligro-fondo: #3a1d22;
+  --color-peligro-borde: #7a3540;
+  --sombra: rgba(0, 0, 0, 0.5);
+}
+
+
 body {
   margin: 0;
   font-family: system-ui, sans-serif;
   line-height: 1.5;
-  color: #222;
+  color: var(--color-texto);
+  background: var(--color-fondo);
+}
+
+a {
+  color: var(--color-enlace);
 }
 
 /* Barra superior: saludo/enlace a la izquierda, botón a la derecha */
@@ -24,7 +79,7 @@ header {
   justify-content: space-between;
   align-items: center;
   padding: 0.75rem 1rem;
-  border-bottom: 1px solid #ddd;
+  border-bottom: 1px solid var(--color-borde);
 }
 
 /* Contenido centrado, con ancho máximo para que se lea cómodo */
@@ -37,7 +92,7 @@ main {
 /* ---- Formulario ---- */
 
 fieldset {
-  border: 1px solid #ddd;
+  border: 1px solid var(--color-borde);
   border-radius: 8px;
   margin-bottom: 1.25rem;
   padding: 1rem;
@@ -59,7 +114,9 @@ textarea {
   width: 100%;
   padding: 0.5rem;
   font: inherit;
-  border: 1px solid #bbb;
+  color: inherit;
+  background: var(--color-superficie);
+  border: 1px solid var(--color-borde-campo);
   border-radius: 6px;
 }
 
@@ -122,9 +179,9 @@ button,
   display: inline-block;
   padding: 0.5rem 1rem;
   font: inherit;
-  border: 1px solid #444;
+  border: 1px solid var(--color-borde-boton);
   border-radius: 6px;
-  background: #fff;
+  background: var(--color-superficie);
   color: inherit;
   text-decoration: none;
   cursor: pointer;
@@ -137,11 +194,11 @@ button:disabled {
 }
 
 .error {
-  color: #b00020;
+  color: var(--color-error);
 }
 
 .exito {
-  color: #1b6e2e;
+  color: var(--color-exito);
 }
 
 /* 
@@ -162,7 +219,8 @@ button:disabled {
     */
 .contenedor-buscador {
   position: relative;
-  margin: 1rem 0;
+  flex: 1 1 260px; /* ocupa el espacio libre; si queda < 260px, baja de línea */
+  min-width: 0;
 }
 
 /* Buscador a todo el ancho */
@@ -171,7 +229,9 @@ button:disabled {
   padding: 0.6rem;
   margin: 0;
   font: inherit;
-  border: 1px solid #bbb;
+  color: inherit;
+  background: var(--color-superficie);
+  border: 1px solid var(--color-borde-campo);
   border-radius: 6px;
 }
 
@@ -187,7 +247,7 @@ button:disabled {
 
 /* Mensajes de estado: cargando, vacío, sin resultados, error */
 .estado {
-  color: #555;
+  color: var(--color-texto-suave);
   text-align: center;
   margin: 2rem 0;
 }
@@ -205,7 +265,7 @@ button:disabled {
 .tarjeta-receta {
   display: flex;
   flex-direction: column;
-  border: 1px solid #ddd;
+  border: 1px solid var(--color-borde);
   border-radius: 8px;
   overflow: hidden; /* que la imagen respete las esquinas redondeadas */
   color: inherit;
@@ -215,7 +275,7 @@ button:disabled {
 
 .tarjeta-receta:hover,
 .tarjeta-receta:focus-visible {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+  box-shadow: 0 4px 12px var(--sombra);
 }
 
 /* Imagen y recuadro "Sin imagen" con la misma altura.
@@ -231,8 +291,8 @@ button:disabled {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #f2f2f2;
-  color: #888;
+  background: var(--color-superficie-suave);
+  color: var(--color-texto-tenue);
   font-size: 0.9rem;
 }
 
@@ -248,7 +308,7 @@ button:disabled {
 /* Descripción */
 .cuerpo-tarjeta p {
   margin: 0;
-  color: #555;
+  color: var(--color-texto-suave);
   font-size: 0.9rem;
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -266,13 +326,13 @@ button:disabled {
 }
 
 .etiqueta.publica {
-  background: #e3f4e6;
-  color: #1b6e2e;
+  background: var(--color-exito-fondo);
+  color: var(--color-exito);
 }
 
 .etiqueta.privada {
-  background: #eee;
-  color: #555;
+  background: var(--color-superficie-suave);
+  color: var(--color-texto-suave);
 }
 
 /* 
@@ -307,13 +367,13 @@ button:disabled {
 
 .info-receta p {
   margin: 0;
-  color: #444;
+  color: var(--color-texto-suave);
   white-space: pre-line; /* respeta los saltos de línea que escribió el usuario */
 }
 
 /* Cada sección (Ingredientes, Pasos) separada por una línea */
 .seccion-receta {
-  border-top: 1px solid #ddd;
+  border-top: 1px solid var(--color-borde);
   padding-top: 1rem;
   margin-bottom: 1.5rem;
 }
@@ -332,7 +392,7 @@ button:disabled {
 
 .lista-ingredientes li {
   padding: 0.4rem 0;
-  border-bottom: 1px dashed #e5e5e5;
+  border-bottom: 1px dashed var(--color-borde);
 }
 
 /* Cantidad + unidad resaltadas para leerlas rápido */
@@ -342,7 +402,7 @@ button:disabled {
 }
 
 .ing-nota {
-  color: #777;
+  color: var(--color-texto-tenue);
   font-style: italic;
 }
 
@@ -396,16 +456,16 @@ button:disabled {
   margin: 0.25rem 0 0;
   padding: 0.25rem 0;
   list-style: none;
-  background: #fff;
-  border: 1px solid #bbb;
+  background: var(--color-superficie);
+  border: 1px solid var(--color-borde-campo);
   border-radius: 6px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+  box-shadow: 0 4px 12px var(--sombra);
 }
 
 .titulo-historial {
   padding: 0.25rem 0.75rem;
   font-size: 0.8rem;
-  color: #777;
+  color: var(--color-texto-tenue);
 }
 
 /* Las opciones son botones, pero se ven como filas de una lista */
@@ -422,13 +482,13 @@ button:disabled {
 
 .opcion-historial:hover,
 .opcion-historial:focus-visible {
-  background: #f2f2f2;
+  background: var(--color-superficie-suave);
 }
 
 .borrar-historial {
   font-size: 0.85rem;
-  color: #b00020;
-  border-top: 1px solid #eee;
+  color: var(--color-error);
+  border-top: 1px solid var(--color-borde);
 }
 
 
@@ -446,13 +506,14 @@ button:disabled {
 
 /* Botón de acción peligrosa: borde y texto rojos */
 .boton-peligro {
-  border-color: #b00020;
-  color: #b00020;
+  border-color: var(--color-error);
+  color: var(--color-error);
 }
 
 /* Variante rellena para el "Sí, eliminar" definitivo */
 .boton-peligro.relleno {
-  background: #b00020;
+  background: #b00020; /* fijo en los dos temas: así el texto blanco siempre se lee */
+  border-color: #b00020;
   color: #fff;
 }
 
@@ -460,9 +521,9 @@ button:disabled {
 .confirmacion {
   margin-top: 1rem;
   padding: 1rem;
-  border: 1px solid #f0b4bd;
+  border: 1px solid var(--color-peligro-borde);
   border-radius: 8px;
-  background: #fdf1f3;
+  background: var(--color-peligro-fondo);
 }
 
 .confirmacion p {
@@ -499,7 +560,7 @@ button:disabled {
 .texto-ayuda {
   margin: 0 0 0.25rem;
   font-size: 0.9rem;
-  color: #555;
+  color: var(--color-texto-suave);
 }
 
 /* Guardar y Cancelar en la misma fila */
@@ -507,4 +568,72 @@ button:disabled {
   display: flex;
   gap: 0.5rem;
   align-items: center;
+}
+
+
+
+/*
+   ENCABEZADO, MODO OSCURO Y ORDEN
+*/
+
+/* Grupo de botones a la derecha del encabezado */
+.acciones-encabezado {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* En la página de inicio el encabezado solo tiene el botón de tema */
+.encabezado-inicio {
+  justify-content: flex-end;
+  border-bottom: none;
+}
+
+/* Botón cuadrado que solo tiene un ícono (44px: cómodo para el dedo) */
+.boton-icono {
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Luna en modo claro, sol en modo oscuro */
+.icono-sol {
+  display: none;
+}
+
+[data-tema="oscuro"] .icono-sol {
+  display: inline;
+}
+
+[data-tema="oscuro"] .icono-luna {
+  display: none;
+}
+
+/* Buscador y orden en la misma fila; en pantallas angostas se apilan */
+.barra-herramientas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+  margin: 1rem 0;
+}
+
+.control-orden {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+  color: var(--color-texto-suave);
+}
+
+.control-orden select {
+  padding: 0.55rem;
+  font: inherit;
+  color: var(--color-texto);
+  background: var(--color-superficie);
+  border: 1px solid var(--color-borde-campo);
+  border-radius: 6px;
 }

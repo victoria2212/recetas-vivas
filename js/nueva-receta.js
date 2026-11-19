@@ -293,15 +293,7 @@ async function cargarRecetaParaEditar(usuarioId) {
     }
 
     // Las imágenes se piden aparte: si fallan, se puede editar igual.
-    let urlsImagenes = {};
-    try {
-      urlsImagenes = await obtenerUrlsDeImagenes([
-        receta.imagen_principal,
-        ...receta.pasos.map((paso) => paso.imagen)
-      ]);
-    } catch (errorImagenes) {
-      console.error('No se pudieron cargar las imágenes:', errorImagenes);
-    }
+    const urlsImagenes = await obtenerUrlsDeReceta(receta);
 
     recetaOriginal = receta; // se guarda para saber qué cambió al guardar
     prepararModoEdicion(receta);
