@@ -1,43 +1,83 @@
-
-// js/preferencias.js · Guardar y leer preferencias en localStorage
+// preferencias.js - cosas que se guardan en localStorage
+// (ultima busqueda, tema, orden e historial)
 //
-// Lo usan varias páginas: el modo oscuro (todas), y el orden, la
-// búsqueda y el historial del listado.
-//
-// localStorage puede fallar (por ejemplo, en navegación privada o con
-// el almacenamiento lleno). Por eso cada acceso va dentro de un
-// try/catch: si falla, la preferencia no se guarda pero la página
-// sigue funcionando.
+// Preferencia es la clase padre: leer, guardar y borrar estan una sola vez aca.
+// las hijas (PreferenciaOpcion y HistorialBusquedas) solo cambian convertir()
+// y aTexto(), asi cada una lee lo guardado a su manera (polimorfismo)
+
+class Preferencia {
+  // privados (#): solo se usan adentro de la clase
+  #clave;
+  #valorPorDefecto;
+
+  constructor(clave, valorPorDefecto) {
+    this.#clave = clave;
+    this.#valorPorDefecto = valorPorDefecto;
+  }
 
 
-// Guarda un valor (texto) con una clave.
-function guardarPreferencia(clave, valor) {
-  try {
-    localStorage.setItem(clave, valor);
-  } catch (error) {
-    console.warn('No se pudo guardar la preferencia ' + clave + ':', error);
+  // getter para que las clases hijas puedan leerlo (el # no se hereda)
+  get valorPorDefecto() {
+    return this.#valorPorDefecto;
+  }
+
+
+  // si localStorage falla o lo guardado esta roto, devuelve el valor por defecto
+  leer() {
+    try {
+      const texto = localStorage.getItem(this.#clave);
+      return texto === null ? this.#valorPorDefecto : this.convertir(texto);
+    } catch (error) {
+      console.warn('No se pudo leer la preferencia ' + this.#clave + ':', error);
+      return this.#valorPorDefecto;
+    }
+  }
+
+
+  // localStorage solo guarda texto, por eso pasa por aTexto()
+  guardar(valor) {
+    try {
+      localStorage.setItem(this.#clave, this.aTexto(valor));
+    } catch (error) {
+      console.warn('No se pudo guardar la preferencia ' + this.#clave + ':', error);
+    }
+  }
+
+
+  borrar() {
+    try {
+      localStorage.removeItem(this.#clave);
+    } catch (error) {
+      console.warn('No se pudo borrar la preferencia ' + this.#clave + ':', error);
+    }
+  }
+
+
+  // estas dos las sobrescriben las hijas
+  convertir(texto) {
+    return texto;
+  }
+
+
+  aTexto(valor) {
+    return String(valor);
   }
 }
 
 
-// Devuelve el valor guardado con esa clave. Si no hay nada guardado
-// (o localStorage falla), devuelve valorPorDefecto.
-// ?? usa el valor de la derecha solo si el de la izquierda es null.
-function leerPreferencia(clave, valorPorDefecto) {
-  try {
-    return localStorage.getItem(clave) ?? valorPorDefecto;
-  } catch (error) {
-    console.warn('No se pudo leer la preferencia ' + clave + ':', error);
-    return valorPorDefecto;
+// preferencia que solo acepta ciertos valores (tema y orden)
+// si lo guardado no es una opcion valida usa el valor por defecto
+class PreferenciaOpcion extends Preferencia {
+  #opciones;
+
+  constructor(clave, opciones, valorPorDefecto) {
+    // super llama al constructor del padre, va antes de usar this
+    super(clave, valorPorDefecto);
+    this.#opciones = opciones;
   }
-}
 
 
-// Borra la preferencia guardada con esa clave.
-function borrarPreferencia(clave) {
-  try {
-    localStorage.removeItem(clave);
-  } catch (error) {
-    console.warn('No se pudo borrar la preferencia ' + clave + ':', error);
+  convertir(texto) {
+    return this.#opciones.includes(texto) ? texto : this.valorPorDefecto;
   }
 }

@@ -1,4 +1,4 @@
-
+// inicio.js - pagina de login (index.html)
 
 const mensajeError = document.getElementById('mensaje-error');
 
@@ -8,10 +8,7 @@ function mostrarError(texto) {
 }
 
 
-// inicia el login con Google (función de auth.js). Si
-//           funciona, Google redirige a otra página y este código ya
-//           no sigue; si falla, muestra el error en la página.
-
+// si falla el login muestro el error en la pagina
 async function alHacerClicEnGoogle() {
   try {
     await iniciarSesionConGoogle();
@@ -21,9 +18,7 @@ async function alHacerClicEnGoogle() {
   }
 }
 
-// ARRANQUE Y EVENTOS
-// Si ya hay una sesión iniciada, no tiene sentido mostrar el login:
-// pasa directo a app.html. Si la verificación falla, se avisa.
+// si ya hay sesion paso directo a mis recetas
 redirigirSiHaySesion().catch((error) => {
   console.error(error);
   mostrarError('No se pudo verificar la sesión.');

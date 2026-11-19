@@ -1,22 +1,11 @@
+// perfil.js - datos del emprendimiento (nombre, frase y logo)
+// solo habla con supabase, no toca el html
+// reusa funciones de recetas.js (validarImagen, subirImagen, etc)
 
-// js/perfil.js · Datos del emprendimiento (nombre, frase y logo)
-//
-// Este archivo SOLO habla con Supabase (tabla perfiles y bucket logos).
-// No toca el HTML: eso lo hacen listado.js y configuracion.js.
-//
-// Requiere que antes estén cargados:
-//   - config.js   → supabaseClient
-//   - auth.js     → obtenerSesion()
-//   - recetas.js  → validarImagen, subirImagen, armarRutaImagen,
-//                   obtenerUsuarioId (se reutilizan, no se repiten)
-
-
-// Bucket creado en 04_perfil_emprendimiento.sql.
 const BUCKET_LOGOS = 'logos';
 
 
-// Trae el perfil del usuario: { nombre, nombre_emprendimiento, frase, logo }.
-// nombre es el de la cuenta de Google (para el saludo).
+// nombre es el de la cuenta de google, lo uso para el saludo
 async function traerPerfil(usuarioId) {
   const { data, error } = await supabaseClient
     .from('perfiles')
@@ -29,9 +18,7 @@ async function traerPerfil(usuarioId) {
 }
 
 
-// Devuelve la dirección pública del logo, o null si no tiene.
-// El bucket es público: la URL se arma sin pedirle nada al servidor
-// (getPublicUrl no hace una llamada por internet).
+// el bucket de logos es publico, la url no vence
 function obtenerUrlDelLogo(rutaLogo) {
   if (!rutaLogo) {
     return null;
@@ -40,14 +27,8 @@ function obtenerUrlDelLogo(rutaLogo) {
 }
 
 
-// Guarda los datos del emprendimiento.
-// Recibe: perfilActual → el perfil como estaba (para saber qué logo tenía).
-//         datos = { nombreEmprendimiento, frase, logo: File o null, quitarLogo: true/false }
-//
-// Orden: 1) subir el logo nuevo, 2) guardar los datos, 3) borrar el
-// logo viejo. Si falla el paso 2, se borra el logo recién subido: así
-// nunca queda un logo nuevo sin usar, ni el perfil apuntando a un
-// archivo que no existe.
+// orden: subir logo nuevo, guardar datos y despues borrar el viejo
+// si falla al guardar, borro el logo que acabo de subir
 async function guardarPerfil(perfilActual, datos) {
   if (datos.logo) {
     validarImagen(datos.logo, 'Logo');
@@ -55,14 +36,13 @@ async function guardarPerfil(perfilActual, datos) {
 
   const rutaNueva = await subirLogoNuevo(datos.logo);
 
-  // Logo que queda: el nuevo; si no hay nuevo y marcó quitar, ninguno;
-  // si no tocó nada, el que ya tenía.
+  // el nuevo, o null si lo quito, o el que ya tenia
   const rutaLogo = rutaNueva ?? (datos.quitarLogo ? null : perfilActual.logo);
 
   try {
     await actualizarFilaPerfil({
       nombre_emprendimiento: datos.nombreEmprendimiento,
-      frase: datos.frase || null, // texto vacío → null
+      frase: datos.frase || null,
       logo: rutaLogo
     });
   } catch (error) {
@@ -70,15 +50,12 @@ async function guardarPerfil(perfilActual, datos) {
     throw error;
   }
 
-  // El logo viejo se borra solo si se reemplazó o se quitó.
   if (perfilActual.logo !== rutaLogo) {
     await borrarLogos([perfilActual.logo]);
   }
 }
 
 
-// Sube el logo nuevo a la carpeta del usuario y devuelve su ruta.
-// Si no eligió ningún archivo, devuelve null.
 async function subirLogoNuevo(archivo) {
   if (!archivo) {
     return null;
@@ -91,9 +68,7 @@ async function subirLogoNuevo(archivo) {
 }
 
 
-// Actualiza la fila del perfil del usuario logueado.
-// .select('id') devuelve la fila modificada: si RLS no deja modificar,
-// Supabase no da error, solo devuelve 0 filas. Así se detecta.
+// si RLS no deja modificar no tira error, devuelve 0 filas. por eso el select
 async function actualizarFilaPerfil(cambios) {
   const usuarioId = await obtenerUsuarioId();
 
@@ -110,9 +85,7 @@ async function actualizarFilaPerfil(cambios) {
 }
 
 
-// Borra logos de Storage. Descarta los null (filter(Boolean)).
-// Si falla, solo lo registra en la consola: los datos ya se guardaron,
-// y un archivo que quedó sin borrar no afecta lo que ve el usuario.
+// si falla solo lo muestro en consola, los datos ya se guardaron
 async function borrarLogos(rutas) {
   const rutasValidas = rutas.filter(Boolean);
   if (rutasValidas.length === 0) {

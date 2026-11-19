@@ -1,14 +1,10 @@
+// auth.js - login con google y manejo de la sesion
+// usa supabaseClient de config.js
 
-// auth.js · Funciones de autenticación
-// Requiere que config.js esté cargado antes (usa supabaseClient).
-
-
-// Inicia el login con Google.
-// Redirige a la pantalla de Google; al terminar, Supabase devuelve al
-// usuario a app.html (dirección que debe estar en Redirect URLs).
+// abre el login de google. cuando termina, supabase vuelve a app.html
+// (esa url tiene que estar en Redirect URLs de supabase)
 async function iniciarSesionConGoogle() {
-  // new URL('app.html', ...) arma la dirección completa de app.html
-  // relativa a la página actual
+  // arma la url completa de app.html a partir de la pagina actual
   const destino = new URL('app.html', window.location.href).href;
 
   const { error } = await supabaseClient.auth.signInWithOAuth({
@@ -21,15 +17,13 @@ async function iniciarSesionConGoogle() {
   }
 }
 
-// Cierra la sesión y vuelve a la página de inicio.
+// cierra sesion y vuelve al inicio
 async function cerrarSesion() {
   await supabaseClient.auth.signOut();
   window.location.href = 'index.html';
 }
 
-// Devuelve la sesión actual, o null si no hay nadie logueado.
-// Al volver de Google, Supabase lee los datos de la URL y crea la
-// sesión; getSession espera a que ese proceso termine.
+// devuelve la sesion o null si no hay nadie logueado
 async function obtenerSesion() {
   const { data, error } = await supabaseClient.auth.getSession();
   if (error) {
@@ -38,8 +32,7 @@ async function obtenerSesion() {
   return data.session;
 }
 
-// Para páginas privadas (app.html, nueva-receta.html...):
-// si no hay sesión, manda al usuario al inicio.
+// para las paginas privadas: si no hay sesion manda al inicio
 async function protegerPagina() {
   const sesion = await obtenerSesion();
   if (!sesion) {
@@ -49,11 +42,10 @@ async function protegerPagina() {
   return sesion;
 }
 
-// Para la página de inicio (index.html):
-// si ya hay sesión, no tiene sentido mostrar el login.
+// en el inicio: si ya esta logueado no tiene sentido mostrar el login
 async function redirigirSiHaySesion() {
   const sesion = await obtenerSesion();
   if (sesion) {
     window.location.href = 'app.html';
   }
-}
+}
