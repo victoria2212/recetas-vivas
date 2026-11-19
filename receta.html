@@ -16,7 +16,8 @@
 </head>
 <body>
   <header>
-    <a href="app.html">← Mis recetas</a>
+    <!-- detalle.js lo cambia: el dueño vuelve a sus recetas, un visitante al perfil del autor -->
+    <a id="enlace-volver" href="app.html">← Mis recetas</a>
     <div class="acciones-encabezado">
       <button id="btn-tema" class="boton-icono" type="button" aria-label="Modo oscuro" aria-pressed="false" title="Modo oscuro">
         <svg class="icono-luna" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
@@ -38,7 +39,7 @@
 
     <div id="no-encontrada" class="estado" hidden>
       <p>No se encontró la receta. Puede que se haya borrado o que no tenga permiso para verla.</p>
-      <a href="app.html" class="boton">Volver a Mis recetas</a>
+      <a href="index.html" class="boton">Ir al inicio</a>
     </div>
 
     <!-- vacia al principio, la completa detalle.js -->

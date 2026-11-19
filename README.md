@@ -13,7 +13,8 @@ Proyecto final del Curso de JavaScript de CapacitarTec.
 - **Inicio de sesión con Google.** Cada usuario ve y administra solo sus propias recetas.
 - **Recetas completas:** título, descripción, imagen del resultado final, ingredientes (cantidad, unidad y nota) y paso a paso con una imagen opcional por paso.
 - **Editar y eliminar** recetas propias (incluidas sus imágenes).
-- **Recetas públicas o privadas**, a elección del autor.
+- **Recetas públicas o privadas**, a elección del autor. Las públicas se pueden ver sin iniciar sesión.
+- **Perfil público para compartir:** una página con el logo, el nombre, la frase y las recetas públicas del emprendimiento. Se comparte con el botón **Compartir perfil**.
 - **Buscador por título** que recuerda las búsquedas recientes.
 - **Orden** por más recientes o por nombre (A–Z / Z–A).
 - **Mi emprendimiento:** nombre, frase corta y logo, que se muestran como portada en "Mis recetas".
@@ -26,6 +27,7 @@ Proyecto final del Curso de JavaScript de CapacitarTec.
 2. En **Mis recetas**, tocar **+ Nueva receta**, completar los datos y guardar.
 3. Tocar una receta para ver el detalle, editarla o eliminarla.
 4. En **Editar** (portada) se cargan el nombre, la frase y el logo del emprendimiento.
+5. Con **Compartir perfil** se envía el link a la página pública (en el celular abre el menú de compartir; en la computadora copia el link).
 
 ## Tecnologías
 
@@ -47,6 +49,7 @@ recetas-vivas/
 ├── nueva-receta.html     Crear y editar receta
 ├── receta.html           Detalle de una receta
 ├── configuracion.html    Datos del emprendimiento
+├── perfil-publico.html   Perfil público del emprendimiento
 ├── privacidad.html       Política de privacidad
 ├── css/
 │   └── styles.css
@@ -59,6 +62,8 @@ recetas-vivas/
 │   ├── detalle.js              Página de detalle
 │   ├── perfil.js               Datos del perfil y emprendimiento
 │   ├── configuracion.js        Página "Mi emprendimiento"
+│   ├── perfil-publico.js       Página del perfil público
+│   ├── vistas.js               Tarjeta de receta y logo (compartidos)
 │   ├── recorte-logo.js         Recorte y zoom del logo
 │   ├── preferencias.js         Preferencias en localStorage (clases)
 │   ├── historial-busquedas.js  Búsquedas recientes
@@ -92,6 +97,7 @@ Luego reemplazar `SUPABASE_URL` y `SUPABASE_PUBLISHABLE_KEY` en `js/config.js`. 
 
 ## Próximas versiones
 
+- Mejor separación visual de los ingredientes en el celular.
 - Categorías de recetas definidas por cada usuario.
 - Videos del paso a paso y del resultado final.
 - Colores de botones personalizados por emprendimiento.
