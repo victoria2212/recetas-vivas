@@ -1,30 +1,18 @@
-
-
-/* box-sizing: border-box hace que el ancho incluya el borde y el
-   relleno, así los elementos no "se pasan" del tamaño indicado. */
 * {
   box-sizing: border-box;
 }
 
-/* ocultar elemento */
+/* para que hidden oculte siempre, aunque la clase tenga display flex o grid */
 [hidden] {
   display: none !important;
 }
 
-/* =====================================================================
-   COLORES (modo claro y modo oscuro)
-   Todos los colores están en variables (--nombre). Cada regla usa
-   var(--nombre) en lugar del color fijo, así el modo oscuro solo
-   cambia los valores de las variables, en un único lugar.
-   El atributo data-tema="oscuro" lo pone tema.js en <html>.
-   color-scheme avisa al navegador el tema, para que los controles
-   propios (barras de desplazamiento, selector de archivos) se adapten.
-   ===================================================================== */
+/* colores en variables, asi el modo oscuro solo cambia los valores */
 :root {
   color-scheme: light;
   --color-fondo: #ffffff;
-  --color-superficie: #ffffff;        /* botones, campos, menús */
-  --color-superficie-suave: #f2f2f2;  /* "Sin imagen", fila al pasar el mouse */
+  --color-superficie: #ffffff;
+  --color-superficie-suave: #f2f2f2;
   --color-texto: #222222;
   --color-texto-suave: #555555;
   --color-texto-tenue: #6b6b6b;
@@ -40,6 +28,7 @@
   --sombra: rgba(0, 0, 0, 0.12);
 }
 
+/* modo oscuro (data-tema lo pone tema.js) */
 [data-tema="oscuro"] {
   color-scheme: dark;
   --color-fondo: #16181b;
@@ -60,7 +49,6 @@
   --sombra: rgba(0, 0, 0, 0.5);
 }
 
-
 body {
   margin: 0;
   font-family: system-ui, sans-serif;
@@ -73,7 +61,7 @@ a {
   color: var(--color-enlace);
 }
 
-/* Barra superior: saludo/enlace a la izquierda, botón a la derecha */
+/* ---- general ---- */
 header {
   display: flex;
   justify-content: space-between;
@@ -82,14 +70,11 @@ header {
   border-bottom: 1px solid var(--color-borde);
 }
 
-/* Contenido centrado, con ancho máximo para que se lea cómodo */
 main {
   max-width: 760px;
   margin: 0 auto;
   padding: 1rem;
 }
-
-/* ---- Formulario ---- */
 
 fieldset {
   border: 1px solid var(--color-borde);
@@ -120,7 +105,6 @@ textarea {
   border-radius: 6px;
 }
 
-/* Casilla de "pública" con su texto al lado */
 .opcion {
   display: flex;
   gap: 0.5rem;
@@ -134,7 +118,7 @@ textarea {
   border-radius: 6px;
 }
 
-/* Fila de ingrediente: cantidad | unidad | nombre | nota | ✕ */
+/* ---- formulario de receta ---- */
 .fila-ingrediente {
   display: grid;
   grid-template-columns: 80px 100px 1fr 1fr auto;
@@ -142,8 +126,6 @@ textarea {
   margin-bottom: 0.5rem;
 }
 
-/* Fila de paso: la descripción ocupa todo el ancho arriba;
-   la imagen y el ✕ quedan abajo */
 .fila-paso {
   display: grid;
   grid-template-columns: 1fr auto;
@@ -152,7 +134,7 @@ textarea {
 }
 
 .fila-paso textarea {
-  grid-column: 1 / -1; /* de la primera a la última columna */
+  grid-column: 1 / -1;
 }
 
 .paso-imagen-label {
@@ -160,7 +142,6 @@ textarea {
   font-size: 0.9rem;
 }
 
-/* En pantallas angostas (celular) los campos del ingrediente se apilan */
 @media (max-width: 600px) {
   .fila-ingrediente {
     grid-template-columns: 1fr 1fr;
@@ -171,9 +152,6 @@ textarea {
   }
 }
 
-/* ---- Botones y mensajes ---- */
-
-/* .boton hace que un enlace <a> se vea igual que un botón */
 button,
 .boton {
   display: inline-block;
@@ -187,7 +165,6 @@ button,
   cursor: pointer;
 }
 
-/* Botón desactivado mientras se guarda */
 button:disabled {
   opacity: 0.6;
   cursor: wait;
@@ -201,29 +178,21 @@ button:disabled {
   color: var(--color-exito);
 }
 
-/* 
-   LISTADO DE RECETAS (app.html)
-    */
-
-/* Título y botón  */
+/* ---- mis recetas ---- */
 .encabezado-listado {
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 1rem;
-  flex-wrap: wrap; /* en pantallas angostas, el botón baja de línea */
+  flex-wrap: wrap;
 }
 
-/* Contenedor del buscador: el margen va acá (y no en el input) para
-   que la lista del historial quede pegada justo debajo del campo.
-    */
 .contenedor-buscador {
   position: relative;
-  flex: 1 1 260px; /* ocupa el espacio libre; si queda < 260px, baja de línea */
+  flex: 1 1 260px;
   min-width: 0;
 }
 
-/* Buscador a todo el ancho */
 #buscador {
   width: 100%;
   padding: 0.6rem;
@@ -235,7 +204,7 @@ button:disabled {
   border-radius: 6px;
 }
 
-/* Oculta un elemento a la vista. Se usa en la etiqueta del buscador. */
+/* se oculta pero los lectores de pantalla lo leen */
 .oculto-visual {
   position: absolute;
   width: 1px;
@@ -245,29 +214,24 @@ button:disabled {
   white-space: nowrap;
 }
 
-/* Mensajes de estado: cargando, vacío, sin resultados, error */
 .estado {
   color: var(--color-texto-suave);
   text-align: center;
   margin: 2rem 0;
 }
 
-/* Grilla de tarjetas.
-   auto-fill + minmax: entran tantas columnas como quepan, cada una de
-   al menos 220px. En el celular queda una sola columna, sin media query. */
 .grilla-recetas {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
   gap: 1rem;
 }
 
-/* Tarjeta: es un enlace, así que se le quita el subrayado y el color azul */
 .tarjeta-receta {
   display: flex;
   flex-direction: column;
   border: 1px solid var(--color-borde);
   border-radius: 8px;
-  overflow: hidden; /* que la imagen respete las esquinas redondeadas */
+  overflow: hidden;
   color: inherit;
   text-decoration: none;
   transition: box-shadow 0.2s;
@@ -278,8 +242,6 @@ button:disabled {
   box-shadow: 0 4px 12px var(--sombra);
 }
 
-/* Imagen y recuadro "Sin imagen" con la misma altura.
-   object-fit: cover recorta la imagen para llenar el espacio sin deformarla. */
 .tarjeta-receta img,
 .sin-imagen {
   width: 100%;
@@ -305,7 +267,6 @@ button:disabled {
   margin: 0.4rem 0 0.25rem;
 }
 
-/* Descripción */
 .cuerpo-tarjeta p {
   margin: 0;
   color: var(--color-texto-suave);
@@ -316,11 +277,10 @@ button:disabled {
   overflow: hidden;
 }
 
-/* Etiqueta Pública / Privada */
 .etiqueta {
   display: inline-block;
   padding: 0.1rem 0.5rem;
-  border-radius: 999px; /* bordes totalmente redondeados (forma de píldora) */
+  border-radius: 999px;
   font-size: 0.75rem;
   font-weight: 600;
 }
@@ -335,12 +295,7 @@ button:disabled {
   color: var(--color-texto-suave);
 }
 
-/* 
-   DETALLE DE RECETA (receta.html)
-    */
-
-/* Encabezado en dos columnas: imagen principal | título y descripción.
-   En el celular se apilan  */
+/* ---- detalle de receta ---- */
 .encabezado-receta {
   display: grid;
   grid-template-columns: 280px 1fr;
@@ -349,8 +304,6 @@ button:disabled {
   margin-bottom: 1.5rem;
 }
 
-/* Imagen principal: cuadrada y recortada sin deformarse.
-   aspect-ratio fija la proporción 1:1 aunque la foto sea rectangular. */
 .imagen-principal,
 .encabezado-receta .sin-imagen {
   width: 100%;
@@ -368,10 +321,9 @@ button:disabled {
 .info-receta p {
   margin: 0;
   color: var(--color-texto-suave);
-  white-space: pre-line; /* respeta los saltos de línea que escribió el usuario */
+  white-space: pre-line;
 }
 
-/* Cada sección (Ingredientes, Pasos) separada por una línea */
 .seccion-receta {
   border-top: 1px solid var(--color-borde);
   padding-top: 1rem;
@@ -383,9 +335,8 @@ button:disabled {
   font-size: 1.25rem;
 }
 
-/* ---- Ingredientes ---- */
 .lista-ingredientes {
-  list-style: none; /* se quitan las viñetas por defecto */
+  list-style: none;
   padding: 0;
   margin: 0;
 }
@@ -395,7 +346,6 @@ button:disabled {
   border-bottom: 1px dashed var(--color-borde);
 }
 
-/* Cantidad + unidad resaltadas para leerlas rápido */
 .ing-cantidad {
   font-weight: 600;
   margin-right: 0.35rem;
@@ -406,9 +356,8 @@ button:disabled {
   font-style: italic;
 }
 
-/* ---- Pasos ---- */
 .lista-pasos {
-  padding-left: 1.25rem; /* espacio para los números del <ol> */
+  padding-left: 1.25rem;
   margin: 0;
 }
 
@@ -418,7 +367,7 @@ button:disabled {
 }
 
 .lista-pasos li::marker {
-  font-weight: 700; /* números de los pasos en negrita */
+  font-weight: 700;
 }
 
 .lista-pasos p {
@@ -433,20 +382,14 @@ button:disabled {
   border-radius: 6px;
 }
 
-/* En pantallas angostas: imagen arriba, texto abajo */
 @media (max-width: 600px) {
   .encabezado-receta {
     grid-template-columns: 1fr;
   }
 }
 
-
-/*
-   HISTORIAL DE BÚSQUEDAS (app.html)
-   */
-
-/* Lista desplegable debajo del buscador.
-   */
+/* ---- historial de busquedas ---- */
+/* absolute para que quede arriba de las tarjetas y no las empuje */
 .historial-busquedas {
   position: absolute;
   top: 100%;
@@ -468,7 +411,6 @@ button:disabled {
   color: var(--color-texto-tenue);
 }
 
-/* Las opciones son botones, pero se ven como filas de una lista */
 .opcion-historial,
 .borrar-historial {
   display: block;
@@ -491,12 +433,7 @@ button:disabled {
   border-top: 1px solid var(--color-borde);
 }
 
-
-/* 
-   ELIMINAR RECETA (receta.html)
-  */
-
-/* Fila de botones: Eliminar / Sí, eliminar + Cancelar */
+/* ---- eliminar receta ---- */
 .acciones-receta {
   display: flex;
   flex-wrap: wrap;
@@ -504,20 +441,18 @@ button:disabled {
   margin-top: 1rem;
 }
 
-/* Botón de acción peligrosa: borde y texto rojos */
 .boton-peligro {
   border-color: var(--color-error);
   color: var(--color-error);
 }
 
-/* Variante rellena para el "Sí, eliminar" definitivo */
+/* rojo fijo en los dos temas para que el texto blanco se lea */
 .boton-peligro.relleno {
-  background: #b00020; /* fijo en los dos temas: así el texto blanco siempre se lee */
+  background: #b00020;
   border-color: #b00020;
   color: #fff;
 }
 
-/* Recuadro de confirmación */
 .confirmacion {
   margin-top: 1rem;
   padding: 1rem;
@@ -530,17 +465,11 @@ button:disabled {
   margin: 0 0 0.5rem;
 }
 
-
-/*
-   EDITAR RECETA (nueva-receta.html en modo edición)
-*/
-
-/* Imagen actual */
+/* ---- editar receta ---- */
 .imagen-actual {
   margin-top: 0.75rem;
 }
 
-/* En la fila del paso, el bloque ocupa todo el ancho de la grilla */
 .fila-paso .imagen-actual {
   grid-column: 1 / -1;
   margin-top: 0;
@@ -552,7 +481,6 @@ button:disabled {
   border-radius: 6px;
 }
 
-/* La etiqueta "Quitar..." pegada a la imagen */
 .imagen-actual .opcion {
   margin-top: 0.25rem;
 }
@@ -563,33 +491,25 @@ button:disabled {
   color: var(--color-texto-suave);
 }
 
-/* Guardar y Cancelar en la misma fila */
 .acciones-formulario {
   display: flex;
   gap: 0.5rem;
   align-items: center;
 }
 
-
-
-/*
-   ENCABEZADO, MODO OSCURO Y ORDEN
-*/
-
-/* Grupo de botones a la derecha del encabezado */
+/* ---- encabezado, modo oscuro y orden ---- */
 .acciones-encabezado {
   display: flex;
   align-items: center;
   gap: 0.5rem;
 }
 
-/* En la página de inicio el encabezado solo tiene el botón de tema */
 .encabezado-inicio {
   justify-content: flex-end;
   border-bottom: none;
 }
 
-/* Botón cuadrado que solo tiene un ícono (44px: cómodo para el dedo) */
+/* 44px para que sea comodo con el dedo */
 .boton-icono {
   width: 44px;
   height: 44px;
@@ -599,7 +519,6 @@ button:disabled {
   justify-content: center;
 }
 
-/* Luna en modo claro, sol en modo oscuro */
 .icono-sol {
   display: none;
 }
@@ -612,7 +531,6 @@ button:disabled {
   display: none;
 }
 
-/* Buscador y orden en la misma fila; en pantallas angostas se apilan */
 .barra-herramientas {
   display: flex;
   flex-wrap: wrap;
@@ -638,13 +556,7 @@ button:disabled {
   border-radius: 6px;
 }
 
-
-/*
-   PORTADA DEL EMPRENDIMIENTO (app.html) Y CONFIGURACIÓN
-*/
-
-/* Franja con logo, nombre y frase, arriba de "Mis recetas".
-   flex-wrap: en pantallas angostas, el botón Editar baja de línea. */
+/* ---- portada del emprendimiento ---- */
 .portada {
   display: flex;
   flex-wrap: wrap;
@@ -657,16 +569,14 @@ button:disabled {
   background: var(--color-superficie-suave);
 }
 
-/* Logo redondo, como la foto de perfil de Instagram o LinkedIn.
-   Sin logo, muestra la inicial del emprendimiento. */
 .portada-logo {
   width: 112px;
   height: 112px;
-  flex-shrink: 0; /* que no se achique cuando falta espacio */
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 50%; /* 50% de esquina redondeada = círculo */
+  border-radius: 50%;
   background: var(--color-superficie);
   border: 1px solid var(--color-borde);
   font-size: 2.5rem;
@@ -675,10 +585,7 @@ button:disabled {
   overflow: hidden;
 }
 
-/* object-fit: cover hace que la imagen LLENE todo el círculo, sin
-   bordes vacíos: la agranda lo justo y recorta lo que sobra a los
-   costados (o arriba y abajo), sin deformarla. Queda centrada.
-   Por eso conviene un logo cuadrado, con el dibujo en el centro. */
+/* cover: llena el circulo sin deformar la imagen */
 .portada-logo img {
   width: 100%;
   height: 100%;
@@ -702,9 +609,6 @@ button:disabled {
   color: var(--color-texto-suave);
 }
 
-/* Vista previa del logo en configuración: igual que en la portada
-   (redondo y recortado), así el usuario ve cómo va a quedar ANTES de
-   guardar. */
 .logo-vista {
   display: block;
   width: 112px;
@@ -714,7 +618,6 @@ button:disabled {
   border-radius: 50%;
 }
 
-/* En el celular, el logo más chico para no empujar tanto las recetas */
 @media (max-width: 600px) {
   .portada {
     padding: 1rem;
@@ -730,10 +633,8 @@ button:disabled {
   }
 }
 
-
-/* Editor del logo nuevo: el lienzo se ve redondo (como en la portada)
-   y se puede arrastrar. touch-action: none evita que, en el celular, al
-   arrastrar el logo se desplace la página. */
+/* ---- editor del logo ---- */
+/* touch-action none para que en el celu no se mueva la pagina al arrastrar */
 .lienzo-logo {
   width: 200px;
   height: 200px;

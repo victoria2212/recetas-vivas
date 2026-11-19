@@ -1,22 +1,10 @@
+// listado.js - pagina mis recetas (app.html)
 
-// js/listado.js · Página "Mis recetas" (app.html)
+// lo que se recuerda con localStorage (clases de preferencias.js)
+const preferenciaBusqueda = new Preferencia('recetas-vivas:busqueda', '');
 
+const preferenciaOrden = new PreferenciaOpcion('recetas-vivas:orden', ['recientes', 'az', 'za'], 'recientes');
 
-// Lógica de la PÁGINA: saludar, traer el listado, dibujar las
-// tarjetas, filtrar con el buscador y ordenar.
-// Lo que habla con Supabase está en recetas.js.
-
-
-// Claves con las que se guardan en localStorage la última búsqueda y
-// el orden elegido (ver preferencias.js).
-const CLAVE_BUSQUEDA = 'recetas-vivas:busqueda';
-const CLAVE_ORDEN = 'recetas-vivas:orden';
-
-// Órdenes posibles del listado (los value del <select id="orden">).
-const ORDENES_VALIDOS = ['recientes', 'az', 'za'];
-
-// Las últimas 5 búsquedas. HistorialBusquedas es la clase de
-// historial-busquedas.js; normalizarTexto está más abajo en este archivo.
 const historial = new HistorialBusquedas('recetas-vivas:historial-busquedas', 5, normalizarTexto);
 
 const saludo = document.getElementById('saludo');
@@ -32,10 +20,10 @@ const contenedorBuscador = document.getElementById('contenedor-buscador');
 const listaHistorial = document.getElementById('historial-busquedas');
 const selectOrden = document.getElementById('orden');
 
-// ESTADO de la página: los datos que llegan de la API.
 
-let recetas = [];       // TODAS las recetas del usuario
-let urlsImagenes = {};  // ruta de la imagen → URL firmada para mostrarla
+// todas las recetas que trajo la api (el buscador filtra sobre esto)
+let recetas = [];
+let urlsImagenes = {};
 
 
 function mostrarError(texto) {
@@ -44,27 +32,16 @@ function mostrarError(texto) {
 }
 
 
-// mostrar el aviso verde según de dónde se viene:
-//           ?guardada=1  → viene de guardar una receta.
-//           ?eliminada=1 → viene de eliminar una receta.
-//           ?perfil=1    → viene de guardar los datos del emprendimiento.
-
-// URLSearchParams lee los parámetros que van después del "?" en la
-// dirección. history.replaceState limpia la dirección para que el
-// aviso no vuelva a aparecer si se recarga la página.
-
+// aviso verde segun de donde viene (?guardada=1, ?eliminada=1, ?perfil=1)
 function mostrarAvisoSegunDireccion() {
   const parametros = new URLSearchParams(window.location.search);
   const mensajeExito = document.getElementById('mensaje-exito');
 
-  // Objeto que relaciona cada parámetro con su mensaje. Así, para
-  // sumar un aviso nuevo alcanza con agregar una línea acá.
   const avisos = {
     guardada: 'Receta guardada correctamente.',
     eliminada: 'Receta eliminada.',
     perfil: 'Datos del emprendimiento guardados.'
   };
-
 
 
   const clave = Object.keys(avisos).find((nombre) => parametros.get(nombre) === '1');
@@ -77,10 +54,7 @@ function mostrarAvisoSegunDireccion() {
 }
 
 
-
-// Trae el perfil del usuario y con él arma el saludo y la portada.
-// Si falla, saluda con el mail y avisa el error, pero la página sigue
-// funcionando (la portada queda oculta).
+// saludo + portada del emprendimiento
 async function mostrarPerfil(sesion) {
   try {
     const perfil = await traerPerfil(sesion.user.id);
@@ -94,9 +68,7 @@ async function mostrarPerfil(sesion) {
 }
 
 
-// Completa la portada con el logo, el nombre y la frase.
-// Si todavía no cargó el nombre del emprendimiento, la portada invita
-// a hacerlo y el botón dice "Configurar" en lugar de "Editar".
+// si no cargo el nombre del emprendimiento, la portada invita a configurarlo
 function dibujarPortada(perfil) {
   const configurado = Boolean(perfil.nombre_emprendimiento);
 
@@ -113,8 +85,7 @@ function dibujarPortada(perfil) {
 }
 
 
-// Pone el logo en la portada. Sin logo, muestra la inicial del
-// emprendimiento en un recuadro (o un recuadro vacío si no hay nombre).
+// sin logo muestro la inicial
 function dibujarLogo(perfil) {
   const contenedor = document.getElementById('portada-logo');
   contenedor.replaceChildren();
@@ -128,13 +99,12 @@ function dibujarLogo(perfil) {
     return;
   }
 
-  // charAt(0) toma la primera letra; ?? '' evita un error si no hay nombre.
   contenedor.textContent = (perfil.nombre_emprendimiento ?? '').charAt(0).toUpperCase();
 }
 
 
+// filtrar en true mientras escribe, en false al hacer clic en el buscador
 function mostrarHistorial(filtrar) {
-  // Operador ternario: si hay que filtrar, se filtra; si no, se usan todas.
   const sugerencias = filtrar ? historial.filtrar(buscador.value) : historial.leer();
 
   listaHistorial.replaceChildren();
@@ -144,13 +114,11 @@ function mostrarHistorial(filtrar) {
     return;
   }
 
-  // Título de la lista (no se puede elegir: es solo texto)
   const titulo = document.createElement('li');
   titulo.className = 'titulo-historial';
   titulo.textContent = 'Búsquedas recientes';
   listaHistorial.appendChild(titulo);
 
-  // Una opción por búsqueda y, al final, "Borrar historial".
   sugerencias.forEach((busqueda) => {
     listaHistorial.appendChild(crearItemHistorial(busqueda, 'opcion-historial', { busqueda }));
   });
@@ -160,10 +128,6 @@ function mostrarHistorial(filtrar) {
 }
 
 
-// Arma un <li> con un botón adentro, para la lista del historial.
-// Recibe el texto del botón, su clase y los datos que se guardan en
-// data-* (por ejemplo { busqueda: 'pan' } → data-busqueda="pan").
-// Object.assign copia esos datos dentro de boton.dataset.
 function crearItemHistorial(texto, clase, datos) {
   const item = document.createElement('li');
   const boton = document.createElement('button');
@@ -181,6 +145,7 @@ function ocultarHistorial() {
 }
 
 
+// un solo listener para toda la lista (delegacion de eventos)
 function alHacerClicEnHistorial(evento) {
   const boton = evento.target.closest('button');
   if (!boton) {
@@ -205,10 +170,7 @@ function alEscribirEnBuscador() {
 }
 
 
-// La búsqueda se registra al presionar Enter (y al salir del campo,
-// ver el evento "change") y NO con cada tecla: si no, el historial se
-// llenaría de búsquedas a medio escribir ("p", "pa", "pan"...).
-
+// guardo la busqueda con enter y no con cada tecla (si no se llena de "p", "pa"...)
 function alPresionarTeclaEnBuscador(evento) {
   if (evento.key === 'Enter') {
     historial.registrar(buscador.value);
@@ -219,14 +181,6 @@ function alPresionarTeclaEnBuscador(evento) {
 }
 
 
-//  cierra las sugerencias cuando el foco sale del buscador
-//           y de su lista (por ejemplo, al hacer clic en otra parte).
-// Recibe:   evento → "focusout"; evento.relatedTarget es el elemento
-//           que RECIBE el foco (o null si es ninguno).
-//
-// Si el foco pasa del campo a un botón de la lista (con Tab), sigue
-// dentro del contenedor: la lista NO se cierra.
-// -----------------------------------------------------------------
 function alSalirDelBuscador(evento) {
   if (!contenedorBuscador.contains(evento.relatedTarget)) {
     ocultarHistorial();
@@ -234,11 +188,7 @@ function alSalirDelBuscador(evento) {
 }
 
 
-// pasa el texto a minúsculas y le quita las tildes, para
-//           que "Budín", "budin" y "BUDÍN" se consideren iguales.
-// Recibe:   texto → cualquier texto.
-// Devuelve: el texto normalizado.
-
+// minusculas y sin tildes, para que "Budín" encuentre "budin"
 function normalizarTexto(texto) {
   return texto
     .toLowerCase()
@@ -246,20 +196,10 @@ function normalizarTexto(texto) {
     .replace(/[\u0300-\u036f]/g, '');
 }
 
-// ARMA el HTML de UNA tarjeta a partir de un objeto receta.
-// Recibe:   receta → { id, titulo, descripcion, imagen_principal, es_publica }
-// Devuelve: el elemento <a> de la tarjeta, listo para agregar.
-//
-// La tarjeta es un enlace a receta.html?id=..., así toda la tarjeta
-// se puede tocar para ver el detalle.
-// Se usa createElement + textContent (y no innerHTML) para que un
-// título con símbolos como < o > se muestre como texto y no se
-// interprete como HTML.
 
 function crearTarjeta(receta) {
   const tarjeta = document.createElement('a');
   tarjeta.className = 'tarjeta-receta';
-  // encodeURIComponent protege el id dentro de la dirección.
   tarjeta.href = `receta.html?id=${encodeURIComponent(receta.id)}`;
 
   tarjeta.appendChild(crearImagenTarjeta(receta));
@@ -268,7 +208,6 @@ function crearTarjeta(receta) {
 }
 
 
-// Imagen de la tarjeta, o un recuadro "Sin imagen" si no hay URL.
 function crearImagenTarjeta(receta) {
   const url = urlsImagenes[receta.imagen_principal];
 
@@ -282,18 +221,15 @@ function crearImagenTarjeta(receta) {
   const imagen = document.createElement('img');
   imagen.src = url;
   imagen.alt = receta.titulo;
-  imagen.loading = 'lazy'; // carga la imagen recién cuando está por verse
+  imagen.loading = 'lazy';
   return imagen;
 }
 
 
-// Parte de texto de la tarjeta: etiqueta, título y descripción.
 function crearCuerpoTarjeta(receta) {
   const cuerpo = document.createElement('div');
   cuerpo.className = 'cuerpo-tarjeta';
 
-  // Etiqueta de visibilidad. El operador ternario (condición ? a : b)
-  // elige el texto y la clase según es_publica.
   const etiqueta = document.createElement('span');
   etiqueta.className = receta.es_publica ? 'etiqueta publica' : 'etiqueta privada';
   etiqueta.textContent = receta.es_publica ? 'Pública' : 'Privada';
@@ -303,7 +239,6 @@ function crearCuerpoTarjeta(receta) {
   titulo.textContent = receta.titulo;
   cuerpo.appendChild(titulo);
 
-  // La descripción es opcional: solo se agrega si existe.
   if (receta.descripcion) {
     const descripcion = document.createElement('p');
     descripcion.textContent = receta.descripcion;
@@ -314,19 +249,11 @@ function crearCuerpoTarjeta(receta) {
 }
 
 
-// borra las tarjetas anteriores y dibuja las de la lista.
-//           Además decide qué aviso mostrar si no hay nada que ver.
-// Recibe lista → array de recetas a mostrar (puede ser filtrado).
-// -----------------------------------------------------------------
 function dibujarRecetas(lista) {
-  // replaceChildren() sin argumentos vacía el contenedor.
   listaRecetas.replaceChildren();
 
-  // ¿El usuario no tiene ninguna receta? (no es lo mismo que "la
-  // búsqueda no encontró nada", por eso se mira el array COMPLETO).
   sinRecetas.hidden = recetas.length > 0;
 
-  // Tiene recetas, pero ninguna coincide con la búsqueda
   const busquedaSinResultados = recetas.length > 0 && lista.length === 0;
   sinResultados.hidden = !busquedaSinResultados;
   if (busquedaSinResultados) {
@@ -340,12 +267,6 @@ function dibujarRecetas(lista) {
 }
 
 
-
-// filter devuelve un array NUEVO solo con los elementos que cumplen
-// la condición; el array original "recetas" no se modifica.
-// Si el buscador está vacío, includes('') es true para todos: se
-// muestran todas las recetas.
-
 function filtrarRecetas() {
   const texto = buscador.value.trim();
   const textoNormalizado = normalizarTexto(texto);
@@ -355,17 +276,11 @@ function filtrarRecetas() {
   );
 
   dibujarRecetas(ordenarRecetas(filtradas));
-  guardarPreferencia(CLAVE_BUSQUEDA, texto);
+  preferenciaBusqueda.guardar(texto);
 }
 
 
-// Devuelve la lista en el orden elegido en el <select id="orden">:
-//   recientes → como llega de la API (las más nuevas primero);
-//   az / za   → por título, alfabéticamente.
-// [...lista] hace una COPIA: sort modifica el array sobre el que se
-// usa, y así el array original no se desordena.
-// localeCompare compara textos en español: con sensitivity 'base',
-// "Budín" y "budin" quedan juntos (no importan mayúsculas ni tildes).
+// [...lista] para no desordenar el array original (sort lo modifica)
 function ordenarRecetas(lista) {
   if (selectOrden.value === 'recientes') {
     return lista;
@@ -378,27 +293,11 @@ function ordenarRecetas(lista) {
 }
 
 
-// Lee el orden guardado. Si no hay uno válido, usa "recientes".
-function leerOrdenGuardado() {
-  const orden = leerPreferencia(CLAVE_ORDEN, 'recientes');
-  return ORDENES_VALIDOS.includes(orden) ? orden : 'recientes';
-}
-
-
-// Al cambiar el orden: lo guarda y vuelve a dibujar el listado.
 function alCambiarOrden() {
-  guardarPreferencia(CLAVE_ORDEN, selectOrden.value);
+  preferenciaOrden.guardar(selectOrden.value);
   filtrarRecetas();
 }
 
-
-
-//  TRAE las recetas de la API y las muestra, manejando los tres estados: cargando → listo, o cargando → error.
-
-// Las imágenes se piden aparte: si fallan, las recetas se muestran
-// igual, sin imagen. Que falle una parte no rompe toda la página.
-// finally se ejecuta SIEMPRE, haya salido bien o mal: por eso ahí se
-// oculta el "Cargando...".
 
 async function cargarRecetas() {
   estadoCarga.hidden = false;
@@ -411,7 +310,6 @@ async function cargarRecetas() {
     recetas = await traerMisRecetas();
 
     try {
-      // map arma un array solo con las rutas de las imágenes.
       urlsImagenes = await obtenerUrlsDeImagenes(
         recetas.map((receta) => receta.imagen_principal)
       );
@@ -420,7 +318,7 @@ async function cargarRecetas() {
       urlsImagenes = {};
     }
 
-    filtrarRecetas(); // dibuja aplicando la búsqueda actual
+    filtrarRecetas();
 
   } catch (error) {
     console.error(error);
@@ -434,53 +332,36 @@ async function cargarRecetas() {
 }
 
 
-//  1) verifica la sesión (sin sesión, vuelve al inicio);
-//  2) recupera la última búsqueda y el orden elegido;
-//  3) muestra el aviso verde, el saludo y la portada del emprendimiento;
-//  4) carga el listado.
-//
-// La búsqueda y el orden se recuperan ANTES de cargar, para que el
-// listado ya aparezca filtrado y ordenado.
-// -----------------------------------------------------------------
+// busqueda y orden antes de cargar, asi aparece ya filtrado
 async function iniciarPagina() {
   const sesion = await protegerPagina();
   if (!sesion) return;
 
-  buscador.value = leerPreferencia(CLAVE_BUSQUEDA, '');
-  selectOrden.value = leerOrdenGuardado();
+  buscador.value = preferenciaBusqueda.leer();
+  selectOrden.value = preferenciaOrden.leer();
   mostrarAvisoSegunDireccion();
 
-  // Perfil y listado son independientes: se ejecutan a la vez.
-  // Promise.all espera a que terminen ambos.
   await Promise.all([mostrarPerfil(sesion), cargarRecetas()]);
 }
-
-
-
-// EVENTOS: qué función se ejecuta ante cada acción del usuario.
 
 
 buscador.addEventListener('input', alEscribirEnBuscador);
 
 
-// focus: al hacer clic (o entrar con Tab) en el buscador, se muestran
-// todas las búsquedas recientes.
 buscador.addEventListener('focus', () => mostrarHistorial(false));
 buscador.addEventListener('keydown', alPresionarTeclaEnBuscador);
 
-// change: se dispara al salir del campo si el texto cambió. Registra
-// la búsqueda aunque no se haya presionado Enter.
 buscador.addEventListener('change', () => historial.registrar(buscador.value));
 contenedorBuscador.addEventListener('focusout', alSalirDelBuscador);
 listaHistorial.addEventListener('click', alHacerClicEnHistorial);
 
 
+// sin esto el buscador pierde el foco antes del clic y la lista se cierra
 listaHistorial.addEventListener('mousedown', (evento) => evento.preventDefault());
 selectOrden.addEventListener('change', alCambiarOrden);
 document.getElementById('btn-reintentar').addEventListener('click', cargarRecetas);
 document.getElementById('btn-salir').addEventListener('click', cerrarSesion);
 
-// Arranque de la página.
 iniciarPagina().catch((error) => {
   console.error(error);
   mostrarError('Ocurrió un error al cargar la página.');

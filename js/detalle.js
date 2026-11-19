@@ -1,13 +1,4 @@
-//notas para mi
-// Se carga con defer, en este orden: librería de Supabase → config.js
-// → auth.js → recetas.js → este archivo. Por eso puede usar
-// supabaseClient, protegerPagina(), las funciones de recetas.js y
-// buscar elementos del HTML sin esperar a que la página termine de cargar.
-
-// Lógica de la PÁGINA "Detalle de receta": leer el id de la
-// dirección, traer la receta y dibujar cada sección.
-// Lo que habla con Supabase está en recetas.js.
-
+// detalle.js - pagina de una receta (receta.html)
 
 const estadoCarga = document.getElementById('estado-carga');
 const errorReceta = document.getElementById('error-receta');
@@ -15,7 +6,6 @@ const textoErrorReceta = document.getElementById('texto-error-receta');
 const noEncontrada = document.getElementById('no-encontrada');
 const detalleReceta = document.getElementById('detalle-receta');
 
-// Elementos de la eliminación
 const accionesPropietario = document.getElementById('acciones-propietario');
 const btnEditar = document.getElementById('btn-editar');
 const btnEliminar = document.getElementById('btn-eliminar');
@@ -25,31 +15,22 @@ const errorEliminar = document.getElementById('error-eliminar');
 const btnConfirmarEliminar = document.getElementById('btn-confirmar-eliminar');
 const btnCancelarEliminar = document.getElementById('btn-cancelar-eliminar');
 
-// ESTADO de la página. let porque se completan al cargar.
-let usuarioActualId = null; // id del usuario logueado
-let recetaActual = null;    // la receta que se está mostrando (para eliminarla)
+let usuarioActualId = null;
+let recetaActual = null;
 
 
-// lee el id de la receta que viene en la dirección.
-//           La tarjeta del listado enlaza a receta.html?id=...
-// Devuelve: el id (texto), o null si la dirección no lo trae.
-// -----------------------------------------------------------------
+// el id viene en la url: receta.html?id=...
 function leerIdDeLaDireccion() {
   const parametros = new URLSearchParams(window.location.search);
   return parametros.get('id');
 }
 
 
-// toLocaleString('es-AR') aplica la coma decimal y el punto de miles.
-// -----------------------------------------------------------------
+// 0.5 -> 0,5 y 1500 -> 1.500
 function formatearCantidad(cantidad) {
   return Number(cantidad).toLocaleString('es-AR');
 }
 
-
-// dibujarImagenPrincipal(url, titulo). Pone la imagen principal al lado del título, o un recuadro "Sin imagen" si no hay URL.
-// Recibe:   url    → URL firmada de la imagen (o undefined).
-//           titulo → texto alternativo de la imagen (accesibilidad).
 
 function dibujarImagenPrincipal(url, titulo) {
   const contenedor = document.getElementById('contenedor-imagen');
@@ -70,9 +51,7 @@ function dibujarImagenPrincipal(url, titulo) {
 }
 
 
-//completa la etiqueta Pública/Privada, el título y la descripción. También cambia el título de la pestaña.
-// Recibe la  receta → el objeto que devolvió traerRecetaPorId().
-
+// textContent y no innerHTML para que no se interprete html
 function dibujarEncabezado(receta) {
   const etiqueta = document.getElementById('etiqueta-visibilidad');
   etiqueta.className = receta.es_publica ? 'etiqueta publica' : 'etiqueta privada';
@@ -80,7 +59,6 @@ function dibujarEncabezado(receta) {
 
   document.getElementById('titulo-receta').textContent = receta.titulo;
 
-  // La descripción es opcional: si no hay, el párrafo se oculta.
   const descripcion = document.getElementById('descripcion-receta');
   descripcion.textContent = receta.descripcion || '';
   descripcion.hidden = !receta.descripcion;
@@ -89,34 +67,23 @@ function dibujarEncabezado(receta) {
 }
 
 
-
-// arma UN <li> de ingrediente, con tres partes: [cantidad unidad] nombre — nota     
-// Recibe el ingrediente → { orden, nombre, cantidad, unidad, nota }
-// Devuelve: el elemento <li>.
-
+// cantidad y unidad, nombre y nota. solo el nombre es obligatorio
 function crearItemIngrediente(ingrediente) {
   const item = document.createElement('li');
 
-  // -- Cantidad y unidad (solo si hay cantidad) --
-  // cantidad puede ser null ("a gusto"); 0 no se permite en la base.
   if (ingrediente.cantidad !== null) {
    
     const cantidad = document.createElement('span');
     cantidad.className = 'ing-cantidad';
-    // filter(Boolean) descarta la unidad si es null, así no queda
-    // "2 null"; join(' ') une las partes con un espacio.
     cantidad.textContent = [formatearCantidad(ingrediente.cantidad), ingrediente.unidad]
       .filter(Boolean)
       .join(' ');
-    item.appendChild(cantidad);  // Cada parte es opcional salvo el nombre, por eso se arma por
-// pedazos y solo se agrega lo que existe.
+    item.appendChild(cantidad);
   }
 
-  // -- Nombre (siempre existe: la base lo exige) --
   
   item.appendChild(document.createTextNode(ingrediente.nombre));
 
-  // Nota opcional
   if (ingrediente.nota) {
     const nota = document.createElement('span');
     nota.className = 'ing-nota';
@@ -128,9 +95,6 @@ function crearItemIngrediente(ingrediente) {
 }
 
 
-//  vacía la lista y agrega un <li> por ingrediente.
-// Recibe los ingredientes → array ya ordenado por "orden".
-
 function dibujarIngredientes(ingredientes) {
   const lista = document.getElementById('lista-ingredientes');
   lista.replaceChildren();
@@ -141,12 +105,7 @@ function dibujarIngredientes(ingredientes) {
 }
 
 
-
-//  vaciar la lista y agrega un <li> por paso, con su texto y, si tiene, su imagen debajo.
-// Recibe los pasos → array ya ordenado por "numero".
-//           urlsImagenes → objeto ruta → URL firmada.
-
-
+// el numero del paso lo pone el <ol>
 function dibujarPasos(pasos, urlsImagenes) {
   const lista = document.getElementById('lista-pasos');
   lista.replaceChildren();
@@ -158,15 +117,13 @@ function dibujarPasos(pasos, urlsImagenes) {
     texto.textContent = paso.descripcion;
     item.appendChild(texto);
 
-    // La imagen del paso es opcional. Si la ruta existe pero su URL
-    // no se pudo generar, simplemente no se muestra.
     const url = urlsImagenes[paso.imagen];
     if (url) {
       const imagen = document.createElement('img');
       imagen.src = url;
       imagen.alt = `Paso ${paso.numero}`;
       imagen.className = 'imagen-paso';
-      imagen.loading = 'lazy'; // carga recién cuando está por verse
+      imagen.loading = 'lazy';
       item.appendChild(imagen);
     }
 
@@ -175,29 +132,18 @@ function dibujarPasos(pasos, urlsImagenes) {
 }
 
 
-//  mostrar los botones "Editar receta" y "Eliminar receta"
-//           solo si el usuario logueado es el dueño de la receta.
-// Recibe la receta → tiene usuario_id (el dueño).
-//
-// Las recetas públicas de otros usuarios también se pueden ver, por
-// eso hay que comparar. Si alguien mostrara el botón a la fuerza
-// (desde DevTools), igual no podría borrar: lo impide RLS.
-
+// editar y eliminar solo para el dueño (igual RLS no deja a otros)
 function mostrarAccionesSiEsPropietario(receta) {
   const esPropietario = receta.usuario_id === usuarioActualId;
 
-  // "Editar" abre el mismo formulario de "Nueva receta", en modo edición.
   btnEditar.href = `nueva-receta.html?id=${encodeURIComponent(receta.id)}`;
 
   accionesPropietario.hidden = !esPropietario;
-  cerrarConfirmacion(); // por si quedó abierta de antes
+  cerrarConfirmacion();
 }
 
 
-
-// El foco va a "Cancelar" (y no a "Sí, eliminar"): si alguien aprieta
-// Enter sin leer, no borra nada por accidente.
-
+// el foco va a cancelar para no borrar sin querer
 function abrirConfirmacion() {
   textoConfirmar.textContent =
     `¿Desea eliminar por completo la receta: "${recetaActual.titulo}"?`;
@@ -208,20 +154,13 @@ function abrirConfirmacion() {
 }
 
 
-
-//  ocultar la pregunta y vuelve a mostrar "Eliminar receta".
-// Se llama al tocar "Cancelar".
-
 function cerrarConfirmacion() {
   confirmarEliminar.hidden = true;
-  // Solo se vuelve a mostrar el botón si el usuario es el dueño.
   accionesPropietario.hidden = !recetaActual || recetaActual.usuario_id !== usuarioActualId;
 }
 
 
-// Activar o desactiva "Sí, eliminar" y "Cancelar".
-// Recibe:   activos → true para activarlos, false para desactivarlos.
-
+// desactivados mientras borra, por el doble clic
 function activarBotonesDeConfirmacion(activos) {
   btnConfirmarEliminar.disabled = !activos;
   btnCancelarEliminar.disabled = !activos;
@@ -229,20 +168,13 @@ function activarBotonesDeConfirmacion(activos) {
 }
 
 
-
-//  borra la receta (eliminarReceta, en recetas.js) y vuelve
-//  al listado con el aviso "Receta eliminada". Si falla,
-//  muestra el error dentro del recuadro de confirmación.
-
+// replace para que atras no vuelva a una receta que ya no existe
 async function alConfirmarEliminacion() {
   activarBotonesDeConfirmacion(false);
   errorEliminar.hidden = true;
 
   try {
     await eliminarReceta(recetaActual);
-    // ?eliminada=1 le avisa a app.html que muestre "Receta eliminada".
-    // replace (y no href): así el botón "Atrás" del navegador no
-    // vuelve a esta página, que ya no existe.
     window.location.replace('app.html?eliminada=1');
   } catch (error) {
     console.error(error);
@@ -252,9 +184,7 @@ async function alConfirmarEliminacion() {
   }
 }
 
-// La página puede estar: cargando, con error, sin encontrar la
-// receta, o mostrando la receta. Esta función muestra SOLO la
-// parte que se le indica y oculta las otras tres.
+// muestra solo uno: cargando, error, no encontrada o la receta
 function mostrarSolo(elemento) {
   [estadoCarga, errorReceta, noEncontrada, detalleReceta].forEach((el) => {
     el.hidden = el !== elemento;
@@ -262,15 +192,9 @@ function mostrarSolo(elemento) {
 }
 
 
-// trae la receta y la dibuja, manejando los estados: cargando → detalle | no encontrada | error.
-// Las imágenes se piden aparte (en UNA sola llamada, la principal y
-// las de los pasos juntas). Si fallan, la receta se muestra igual,
-// sin imágenes: que falle una parte no rompe toda la página.
-
 async function cargarReceta() {
   const id = leerIdDeLaDireccion();
 
-  // Sin id en la dirección no hay nada que buscar.
   if (!id) {
     mostrarSolo(noEncontrada);
     return;
@@ -286,7 +210,6 @@ async function cargarReceta() {
       return;
     }
 
-    // Las imágenes se piden aparte: si fallan, la receta se ve igual.
     const urlsImagenes = await obtenerUrlsDeReceta(receta);
     dibujarReceta(receta, urlsImagenes);
     mostrarSolo(detalleReceta);
@@ -297,22 +220,18 @@ async function cargarReceta() {
 }
 
 
-// Dibuja todas las partes de la receta y muestra los botones del dueño.
 function dibujarReceta(receta, urlsImagenes) {
   dibujarImagenPrincipal(urlsImagenes[receta.imagen_principal], receta.titulo);
   dibujarEncabezado(receta);
   dibujarIngredientes(receta.ingredientes);
   dibujarPasos(receta.pasos, urlsImagenes);
 
-  recetaActual = receta; // se guarda para poder eliminarla después
+  recetaActual = receta;
   mostrarAccionesSiEsPropietario(receta);
 }
 
 
-// Muestra el estado que corresponde cuando falla la carga.
-// Si el id no tiene formato uuid, PostgreSQL responde con el código
-// 22P02 (texto inválido para el tipo): para el usuario eso equivale a
-// "no existe". Cualquier otro error es de conexión.
+// 22P02 = el id no tiene formato uuid, lo tomo como que no existe
 function mostrarErrorDeCarga(error) {
   console.error(error);
 
@@ -327,11 +246,7 @@ function mostrarErrorDeCarga(error) {
 }
 
 
-// si la página se abrió con ?editada=1 (viene de guardar cambios), muestra el aviso verde "Cambios guardados".
-
-// history.replaceState saca el "&editada=1" de la dirección (dejando
-// el id), para que el aviso no vuelva a aparecer al recargar.
-
+// viene de editar (?editada=1). limpio la url para que no aparezca de nuevo al recargar
 function mostrarAvisoSiSeEdito() {
   const parametros = new URLSearchParams(window.location.search);
 
@@ -343,10 +258,6 @@ function mostrarAvisoSiSeEdito() {
 }
 
 
-// hay que verificar la sesión (sin sesión, vuelve al inicio),
-//           guarda el id del usuario (para saber si es el dueño) y
-//           carga la receta.
-// -----------------------------------------------------------------
 async function iniciarPagina() {
   const sesion = await protegerPagina();
   if (!sesion) return;
@@ -358,18 +269,13 @@ async function iniciarPagina() {
 }
 
 
-
-// EVENTOS
-
 document.getElementById('btn-reintentar').addEventListener('click', cargarReceta);
 document.getElementById('btn-salir').addEventListener('click', cerrarSesion);
 
-// -- Eliminar receta --
 btnEliminar.addEventListener('click', abrirConfirmacion);
 btnCancelarEliminar.addEventListener('click', cerrarConfirmacion);
 btnConfirmarEliminar.addEventListener('click', alConfirmarEliminacion);
 
-// Arranque de la página.
 iniciarPagina().catch((error) => {
   console.error(error);
   textoErrorReceta.textContent = 'Ocurrió un error al cargar la página.';

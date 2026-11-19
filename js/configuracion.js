@@ -1,9 +1,4 @@
-
-// js/configuracion.js · Página "Mi emprendimiento" (configuracion.html)
-//
-// Carga los datos del emprendimiento en el formulario, los valida y los
-// guarda. Lo que habla con Supabase está en perfil.js.
-
+// configuracion.js - pagina mi emprendimiento
 
 const form = document.getElementById('form-perfil');
 const estadoCarga = document.getElementById('estado-carga');
@@ -18,10 +13,8 @@ const editorLogo = document.getElementById('editor-logo');
 const logoActual = document.getElementById('logo-actual');
 const checkQuitarLogo = document.getElementById('quitar-logo');
 
-// El perfil tal como está guardado (para saber qué logo tenía).
 let perfilActual = null;
 
-// Editor para encuadrar el logo nuevo (clase de recorte-logo.js).
 const recorte = new RecorteLogo(
   document.getElementById('lienzo-logo'),
   document.getElementById('zoom-logo')
@@ -34,8 +27,6 @@ function mostrarError(texto) {
 }
 
 
-// Completa el formulario con los datos guardados.
-// ?? '' : si el dato es null, el campo queda vacío (y no dice "null").
 function completarFormulario(perfil) {
   inputNombre.value = perfil.nombre_emprendimiento ?? '';
   inputFrase.value = perfil.frase ?? '';
@@ -48,7 +39,6 @@ function completarFormulario(perfil) {
 }
 
 
-// Trae el perfil y muestra el formulario. Si falla, muestra el error.
 async function cargarPerfil(usuarioId) {
   try {
     perfilActual = await traerPerfil(usuarioId);
@@ -65,48 +55,44 @@ async function cargarPerfil(usuarioId) {
 }
 
 
-// Al elegir un archivo: lo valida y lo abre en el editor, en el lugar
-// del logo actual. Si el archivo no sirve (tipo o tamaño), muestra el
-// error y vacía la elección.
-// Si el usuario cancela la elección, vuelve a mostrar el logo actual.
+// valida el archivo y lo abre en el editor
 async function alElegirLogo() {
   const archivo = inputLogo.files[0];
   mensajeError.hidden = true;
 
   try {
     if (archivo) {
-      validarImagen(archivo, 'Logo'); // de recetas.js: tipo y tamaño
+      validarImagen(archivo, 'Logo');
       await recorte.cargar(archivo);
     }
     mostrarEditorLogo(Boolean(archivo));
   } catch (error) {
     mostrarError(error.message);
-    inputLogo.value = ''; // vacía la elección
+    inputLogo.value = '';
     mostrarEditorLogo(false);
   }
 }
 
 
-// Muestra el editor (hay logo nuevo) o el logo actual (si tiene).
 function mostrarEditorLogo(hayLogoNuevo) {
+  if (!hayLogoNuevo) {
+    recorte.descartar();
+  }
   editorLogo.hidden = !hayLogoNuevo;
   logoActual.hidden = hayLogoNuevo || !perfilActual.logo;
 }
 
 
-// Junta los campos en un objeto, con la forma que espera guardarPerfil().
 function leerFormulario() {
   return {
     nombreEmprendimiento: inputNombre.value.trim(),
     frase: inputFrase.value.trim(),
-    logo: null, // el archivo final lo arma el editor al guardar
+    logo: null,
     quitarLogo: checkQuitarLogo.checked
   };
 }
 
 
-// Devuelve el texto del primer problema, o null si está todo bien.
-// (El tipo y el tamaño del logo los revisa validarImagen, en recetas.js.)
 function validar(datos) {
   if (datos.nombreEmprendimiento.length < 2) {
     return 'Escriba el nombre del emprendimiento (al menos 2 letras).';
@@ -115,10 +101,8 @@ function validar(datos) {
 }
 
 
-// Al tocar "Guardar": valida y guarda. Si sale bien, vuelve a
-// "Mis recetas" con el aviso verde (?perfil=1).
 async function alEnviarFormulario(evento) {
-  evento.preventDefault(); // sin esto, el navegador recargaría la página
+  evento.preventDefault();
   mensajeError.hidden = true;
 
   const datos = leerFormulario();
@@ -128,12 +112,12 @@ async function alEnviarFormulario(evento) {
     return;
   }
 
-  btnGuardar.disabled = true; // evita guardar dos veces con doble clic
+  btnGuardar.disabled = true;
   btnGuardar.textContent = 'Guardando...';
 
   try {
-    // Si hay un logo nuevo, se guarda tal como quedó encuadrado.
-    if (!editorLogo.hidden) {
+    // si eligio logo nuevo lo guardo como quedo en el editor
+    if (recorte.tieneImagen) {
       datos.logo = await recorte.obtenerArchivo();
     }
     await guardarPerfil(perfilActual, datos);
@@ -147,7 +131,6 @@ async function alEnviarFormulario(evento) {
 }
 
 
-// Verifica la sesión (sin sesión, vuelve al inicio) y carga el perfil.
 async function iniciarPagina() {
   const sesion = await protegerPagina();
   if (!sesion) return;
